@@ -1,9 +1,11 @@
 """
-main.py - Agent J 메인 진입점 (Phase 4 업그레이드)
+main.py - Agent J 메인 진입점 (Phase 6 업그레이드)
 
 실행: python main.py
+커맨드 팔레트: python main.py --cmd "질문"
+자동 회고: python main.py --reflect
 """
-import os, sys
+import os, sys, uuid, argparse
 from pathlib import Path
 from dotenv import load_dotenv
 from rich.console import Console
@@ -39,8 +41,10 @@ def print_welcome(history_turns: int = 0):
         "✍️  [yellow]Writer[/yellow]    에세이·문서 첨삭\n"
         "📰 [magenta]News[/magenta]      뉴스 브리핑\n"
         "📊 [cyan]Slide[/cyan]     발표자료 생성\n"
-        "🎯 [red]Career[/red]    커리어·취업 관리\n\n"
-        "[dim]/help  /memory  /stats  /tasks  /schedule  /clear  /exit[/dim]"
+        "🎯 [red]Career[/red]    커리어·취업 관리\n"
+        "🔬 [white]Research[/white]  웹 조사 + Notion 저장\n\n"
+        "[dim]/help  /memory  /stats  /tasks  /schedule  /career  /jobs[/dim]\n"
+        "[dim]/reflect  /weekly  /dashboard  /clear  /exit[/dim]"
         + memory_note,
         title="🤖 J", border_style="cyan"
     ))
@@ -65,6 +69,10 @@ def print_help():
 | `/tasks` | 할 일 목록 |
 | `/schedule` | 일정 보기 |
 | `/career` | 커리어 현황 |
+| `/jobs` | 채용 지원 현황 |
+| `/reflect` | 오늘 회고 작성 |
+| `/weekly` | 주간 회고 생성 |
+| `/dashboard` | 대화 히스토리 대시보드 열기 |
 | `/clear` | 대화 초기화 |
 | `/exit` | 저장 후 종료 |
 """))
@@ -123,41 +131,19 @@ def handle_special_commands(cmd: str, orchestrator) -> bool:
         console.print(Panel(Markdown(response), title="🎯 커리어 현황", border_style="red"))
         return True
 
-    return False
-
-
-def main():
-    if not check_setup():
-        sys.exit(1)
-
-    os.chdir(Path(__file__).parent)
-
-    from orchestrator.router import Orchestrator
-    orchestrator = Orchestrator()
-
-    history_turns = len(orchestrator.conversation_history) // 2
-    print_welcome(history_turns)
-
-    while True:
+    elif cmd == "/jobs":
         try:
-            user_input = Prompt.ask("\n[bold cyan]You[/bold cyan]").strip()
-            if not user_input:
-                continue
-
-            if user_input.startswith("/"):
-                handle_special_commands(user_input.lower() if not user_input.lower().startswith("/remember") else user_input, orchestrator)
-                continue
-
-            response = orchestrator.route(user_input)
-            console.print(Panel(Markdown(response), title="[bold green]J[/bold green]", border_style="green"))
-
-        except KeyboardInterrupt:
-            orchestrator.save_and_exit()
-            console.print("\n[yellow]세션 저장 완료. (Ctrl+C)[/yellow]")
-            sys.exit(0)
+            from tools.career_tools_v2 import get_job_applications, format_jobs_summary
+            jobs = get_job_applications()
+            console.print(Panel(Markdown(format_jobs_summary(jobs)), title="💼 채용 지원 현황", border_style="red"))
         except Exception as e:
             console.print(f"[red]오류: {e}[/red]")
+        return True
 
-
-if __name__ == "__main__":
-    main()
+    elif cmd.startswith("/reflect"):
+        try:
+            from agents.reflection_agent import run_reflection
+            extra = cmd.replace("/reflect", "").strip()
+            console.print("[dim]  회고 작성 중...[/dim]")
+            result = run_reflection(user_input=extra if extra else None)
+            console

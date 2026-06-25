@@ -95,6 +95,17 @@ def send_digest(summaries: dict):
     subject  = f"🤖 Agent J Daily Briefing — {date_str}"
     html     = format_digest_html(summaries, date_str)
 
+    # 날씨 섹션 삽입 (뉴스 앞)
+    try:
+        from tools.weather_tools import format_weather_for_email
+        weather_html = format_weather_for_email()
+        # <body> 태그 바로 뒤에 날씨 삽입
+        html = html.replace("<body", "<body", 1)
+        insert_marker = "<h1" if "<h1" in html else "<table"
+        html = html.replace(insert_marker, weather_html + insert_marker, 1)
+    except Exception as e:
+        print(f"  ⚠️ 날씨 정보 생략: {e}")
+
     print("📧 이메일 발송 중...")
     recipient = os.getenv("DIGEST_RECIPIENT", os.getenv("GMAIL_ADDRESS"))
     result = send_email(subject, html, recipient)
@@ -105,19 +116,4 @@ def send_digest(summaries: dict):
         print(f"❌ 발송 실패: {result['error']}")
         sys.exit(1)
 
-# ── 메인 ──────────────────────────────────────────────────
-def main():
-    print("=" * 50)
-    print(f"  Agent J — Daily News Digest")
-    print(f"  {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    print("=" * 50)
-
-    check_env()
-    news      = fetch_all_news()
-    summaries = summarize_news(news)
-    send_digest(summaries)
-
-    print("\n✅ 완료!")
-
-if __name__ == "__main__":
-    main()
+# ── 메인 ───�

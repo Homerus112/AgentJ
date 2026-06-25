@@ -10,8 +10,8 @@ console = Console()
 ROUTER_MODEL = os.getenv("ORCHESTRATOR_MODEL", "claude-haiku-4-5-20251001")
 
 ROUTER_SYSTEM_PROMPT = """You are the orchestrator for 'J'. Decide which agent to route to.
-Agents: dev (code/files), planner (tasks/schedule), writer (editing/drafts), news (news/briefing), slide (presentations/pptx), career (goals/job applications/skills), general (other)
-Reply ONLY in JSON: {"agent": "dev"|"planner"|"writer"|"news"|"slide"|"career"|"general", "reason": "one line"}"""
+Agents: dev (code/files), planner (tasks/schedule), writer (editing/drafts), news (news/briefing), slide (presentations/pptx), career (goals/job applications/skills), research (web search/investigate/lookup), general (other)
+Reply ONLY in JSON: {"agent": "dev"|"planner"|"writer"|"news"|"slide"|"career"|"research"|"general", "reason": "one line"}"""
 
 GENERAL_SYSTEM_PROMPT = f"""You are 'J', a friendly AI assistant. Answer in Korean unless the user writes in English. Today: {date.today().isoformat()}"""
 
@@ -31,6 +31,8 @@ class Orchestrator:
 
         self._dev_agent = self._planner_agent = self._writer_agent = None
         self._news_agent = self._slide_agent = self._career_agent = None
+        self._research_agent = None
+        self.last_agent = None  # 마지막 사용 에이전트 (히스토리 저장용)
 
     @property
     def dev_agent(self):
@@ -74,9 +76,34 @@ class Orchestrator:
             self._career_agent = CareerAgent()
         return self._career_agent
 
+    @property
+    def research_agent(self):
+        if not self._research_agent:
+            from agents.research_agent import run_research
+            self._research_agent = run_research
+        return self._research_agent
+
     def route(self, user_message: str) -> str:
+        # 날씨 키워드 선처리
+        weather_kw = ["날씨", "기온", "비 오나", "비와", "우산", "덥나", "춥나", "weather"]
+        if any(kw in user_message.lower() for kw in weather_kw):
+            self.last_agent = "weather"
+            console.print(f"[dim]  -> weather (keyword fallback)[/dim]")
+            response = self._handle_weather(user_message)
+            self._update_history(user_message, response, "weather")
+            return response
+
+        # 채용 지원 추가 키워드 선처리
+        job_add_kw = ["지원 추가", "채용 추가", "잡 추가", "지원했어", "지원함", "지원했다"]
+        if any(kw in user_message for kw in job_add_kw):
+            self.last_agent = "career"
+            response = self._handle_job_add(user_message)
+            self._update_history(user_message, response, "career")
+            return response
+
         agent_name, reason = self._decide_agent(user_message)
         console.print(f"[dim]  -> {agent_name} ({reason})[/dim]")
+        self.last_agent = agent_name
 
         if agent_name == "dev":
             response = self.dev_agent.run(user_message, self.conversation_history)
@@ -90,55 +117,36 @@ class Orchestrator:
             response = self.slide_agent.run(user_message, self.conversation_history)
         elif agent_name == "career":
             response = self.career_agent.run(user_message, self.conversation_history)
+        elif agent_name == "research":
+            response = self.research_agent(user_message)
         else:
             response = self._handle_general(user_message)
 
-        # 히스토리 + 통계 업데이트
+        self._update_history(user_message, response, agent_name)
+        return response
+
+    def _update_history(self, user_message: str, response: str, agent_name: str):
+        """히스토리 + 통계 업데이트 (공통)"""
         self.conversation_history.append({"role": "user", "content": user_message})
         self.conversation_history.append({"role": "assistant", "content": response})
         if len(self.conversation_history) > 40:
             self.conversation_history = self.conversation_history[-40:]
         self.memory.update_agent_stat(agent_name)
-        return response
 
-    def save_and_exit(self):
-        """종료 시 현재 세션을 메모리에 저장한다."""
-        self.memory.save_session(self.conversation_history)
-
-    def _decide_agent(self, user_message: str) -> tuple:
+    def _handle_weather(self, user_message: str) -> str:
+        """날씨 정보 처리"""
         try:
-            resp = self.api_client.messages.create(
-                model=ROUTER_MODEL, max_tokens=100,
-                system=ROUTER_SYSTEM_PROMPT,
-                messages=[{"role": "user", "content": user_message}]
-            )
-            d = json.loads(resp.content[0].text.strip())
-            return d.get("agent", "general"), d.get("reason", "")
-        except Exception:
-            return self._keyword_fallback(user_message), "keyword fallback"
+            from tools.weather_tools import get_weather_summary
+            # 도시명 추출 (간단한 키워드 매핑)
+            city = None
+            city_map = {"부산": "Busan", "인천": "Incheon", "대구": "Daegu",
+                        "대전": "Daejeon", "광주": "Gwangju", "제주": "Jeju"}
+            for kor, eng in city_map.items():
+                if kor in user_message:
+                    city = eng
+                    break
+            return get_weather_summary(city)
+        except Exception as e:
+            return f"날씨 정보를 가져오지 못했어요. 오류: {e}"
 
-    def _keyword_fallback(self, message: str) -> str:
-        msg = message.lower()
-        kw = {
-            "dev":     ["code","python","bug","debug","function","script","execute","implement","코드","파이썬","버그","오류","함수","실행","구현"],
-            "planner": ["todo","task","schedule","deadline","reminder","할 일","일정","스케줄","추가","완료","삭제","목록"],
-            "writer":  ["edit","essay","translate","draft","report","rewrite","proofread","첨삭","문서","에세이","번역","보고서","글쓰기","편집"],
-            "news":    ["news","briefing","headline","latest","뉴스","테크","경제","스포츠","정치","브리핑"],
-            "slide":   ["slide","presentation","pptx","deck","발표","슬라이드","프레젠테이션","피티"],
-            "career":  ["career","resume","job","application","interview","goal","skill","커리어","이력서","취업","지원","면접","목표","스킬"],
-        }
-        scores = {k: sum(1 for w in v if w in msg) for k, v in kw.items()}
-        best = max(scores, key=scores.get)
-        return best if scores[best] > 0 else "general"
-
-    def _handle_general(self, user_message: str) -> str:
-        msgs = list(self.conversation_history) + [{"role": "user", "content": user_message}]
-        resp = self.api_client.messages.create(
-            model=ROUTER_MODEL, max_tokens=1024,
-            system=GENERAL_SYSTEM_PROMPT, messages=msgs
-        )
-        return resp.content[0].text
-
-    def clear_history(self):
-        self.conversation_history = []
-        console.print("[yellow]대화 히스토리가 초기화되었습니다.[/yellow]")
+    def _handle_job_add(self, user_messa

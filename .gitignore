@@ -12,6 +12,7 @@ __pycache__/
 # 로컬 데이터 (개인 태스크/일정은 GitHub에 올리지 않음)
 data/tasks.json
 data/schedule.json
+data/history.db
 memory/context.json
 logs/
 
@@ -22,3 +23,6 @@ logs/
 # OS
 .DS_Store
 Thumbs.db
+
+credentials.json
+data/google_t

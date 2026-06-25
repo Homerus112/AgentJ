@@ -1,0 +1,24 @@
+# API 키 및 환경변수 (절대 GitHub에 올리지 말 것)
+.env
+
+# Python 가상환경
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# 로컬 데이터 (개인 태스크/일정은 GitHub에 올리지 않음)
+data/tasks.json
+data/schedule.json
+memory/context.json
+logs/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db

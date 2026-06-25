@@ -3,3 +3,11 @@ python-dotenv>=1.0.0
 rich>=13.0.0
 feedparser>=6.0.0
 python-pptx>=0.6.21
+
+# Phase 5 - Notion 연동
+notion-client>=2.2.0
+
+# Phase 5 - Google Calendar 연동
+google-auth-oauthlib>=1.2.0
+google-auth-httplib2>=0.2.0
+google-api-python-client>=2.120.0

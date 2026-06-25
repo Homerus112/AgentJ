@@ -1,5 +1,5 @@
 """
-router.py - Orchestrator 'J' routing logic.
+router.py - Orchestrator 'J' routing logic with persistent memory.
 """
 import json, os
 from datetime import date
@@ -19,7 +19,16 @@ GENERAL_SYSTEM_PROMPT = f"""You are 'J', a friendly AI assistant. Answer in Kore
 class Orchestrator:
     def __init__(self):
         self.api_client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
-        self.conversation_history = []
+
+        # 메모리 매니저 초기화 (세션 간 기억 유지)
+        from memory.memory_manager import MemoryManager
+        self.memory = MemoryManager()
+
+        # 이전 세션 히스토리 불러오기
+        self.conversation_history = self.memory.load_recent_history()
+        if self.conversation_history:
+            console.print(f"[dim]  이전 대화 {len(self.conversation_history)//2}턴 로드됨[/dim]")
+
         self._dev_agent = self._planner_agent = self._writer_agent = None
         self._news_agent = self._slide_agent = self._career_agent = None
 
@@ -68,6 +77,7 @@ class Orchestrator:
     def route(self, user_message: str) -> str:
         agent_name, reason = self._decide_agent(user_message)
         console.print(f"[dim]  -> {agent_name} ({reason})[/dim]")
+
         if agent_name == "dev":
             response = self.dev_agent.run(user_message, self.conversation_history)
         elif agent_name == "planner":
@@ -82,11 +92,18 @@ class Orchestrator:
             response = self.career_agent.run(user_message, self.conversation_history)
         else:
             response = self._handle_general(user_message)
+
+        # 히스토리 + 통계 업데이트
         self.conversation_history.append({"role": "user", "content": user_message})
         self.conversation_history.append({"role": "assistant", "content": response})
         if len(self.conversation_history) > 40:
             self.conversation_history = self.conversation_history[-40:]
+        self.memory.update_agent_stat(agent_name)
         return response
+
+    def save_and_exit(self):
+        """종료 시 현재 세션을 메모리에 저장한다."""
+        self.memory.save_session(self.conversation_history)
 
     def _decide_agent(self, user_message: str) -> tuple:
         try:

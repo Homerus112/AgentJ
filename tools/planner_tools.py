@@ -13,41 +13,30 @@ SCHEDULE_FILE = Path(os.getenv("SCHEDULE_FILE", "data/schedule.json"))
 
 
 def _load_tasks() -> dict:
-    """tasks.json 파일 로드"""
     if TASKS_FILE.exists():
         return json.loads(TASKS_FILE.read_text(encoding="utf-8"))
     return {"tasks": [], "next_id": 1}
 
 
 def _save_tasks(data: dict):
-    """tasks.json 파일 저장"""
     TASKS_FILE.parent.mkdir(parents=True, exist_ok=True)
     TASKS_FILE.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
 def _load_schedule() -> dict:
-    """schedule.json 파일 로드"""
     if SCHEDULE_FILE.exists():
         return json.loads(SCHEDULE_FILE.read_text(encoding="utf-8"))
     return {"events": []}
 
 
 def _save_schedule(data: dict):
-    """schedule.json 파일 저장"""
     SCHEDULE_FILE.parent.mkdir(parents=True, exist_ok=True)
     SCHEDULE_FILE.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
-# ── Task 관련 도구 ─────────────────────────────────────────
+# Task 관련 도구
 
 def add_task(title: str, description: str = "", due_date: str = "", priority: str = "medium") -> dict:
-    """새 할 일을 추가한다.
-    Args:
-        title: 할 일 제목
-        description: 세부 설명 (선택)
-        due_date: 마감일 (예: 2026-07-01, 선택)
-        priority: 우선순위 (high/medium/low)
-    """
     data = _load_tasks()
     task = {
         "id": data["next_id"],
@@ -65,11 +54,6 @@ def add_task(title: str, description: str = "", due_date: str = "", priority: st
 
 
 def list_tasks(filter_status: str = "all", filter_priority: str = "all") -> dict:
-    """할 일 목록을 조회한다.
-    Args:
-        filter_status: all / pending / done
-        filter_priority: all / high / medium / low
-    """
     data = _load_tasks()
     tasks = data["tasks"]
     if filter_status != "all":
@@ -80,7 +64,6 @@ def list_tasks(filter_status: str = "all", filter_priority: str = "all") -> dict
 
 
 def complete_task(task_id: int) -> dict:
-    """할 일을 완료 처리한다."""
     data = _load_tasks()
     for task in data["tasks"]:
         if task["id"] == task_id:
@@ -92,7 +75,6 @@ def complete_task(task_id: int) -> dict:
 
 
 def delete_task(task_id: int) -> dict:
-    """할 일을 삭제한다."""
     data = _load_tasks()
     before = len(data["tasks"])
     data["tasks"] = [t for t in data["tasks"] if t["id"] != task_id]
@@ -104,34 +86,24 @@ def delete_task(task_id: int) -> dict:
 
 def update_task(task_id: int, title: str = None, description: str = None,
                 due_date: str = None, priority: str = None) -> dict:
-    """할 일 내용을 수정한다."""
     data = _load_tasks()
     for task in data["tasks"]:
         if task["id"] == task_id:
-            if title is not None:
-                task["title"] = title
-            if description is not None:
-                task["description"] = description
-            if due_date is not None:
-                task["due_date"] = due_date
-            if priority is not None:
-                task["priority"] = priority
+            if title is not None: task["title"] = title
+            if description is not None: task["description"] = description
+            if due_date is not None: task["due_date"] = due_date
+            if priority is not None: task["priority"] = priority
             task["updated_at"] = datetime.now().isoformat()
             _save_tasks(data)
             return {"success": True, "message": f"수정 완료: [{task_id}]", "task": task}
     return {"success": False, "error": f"ID {task_id} 할 일을 찾을 수 없음"}
 
 
-# ── Schedule 관련 도구 ─────────────────────────────────────
+# Schedule 관련 도구
 
 def add_event(title: str, date: str, time: str = "", description: str = "") -> dict:
-    """일정을 추가한다.
-    Args:
-        title: 일정 제목
-        date: 날짜 (예: 2026-07-01)
-        time: 시간 (예: 14:00, 선택)
-        description: 세부 내용 (선택)
-    """
+    """일정을 추가한다. 로컬 저장 후 Google Calendar에도 자동 동기화."""
+    # 1. 로컬 저장
     data = _load_schedule()
     event = {
         "id": len(data["events"]) + 1,
@@ -143,15 +115,31 @@ def add_event(title: str, date: str, time: str = "", description: str = "") -> d
     }
     data["events"].append(event)
     _save_schedule(data)
-    return {"success": True, "message": f"일정 추가: {date} {time} {title}", "event": event}
+
+    # 2. Google Calendar 자동 동기화
+    gcal_result = None
+    try:
+        from tools.gcal_tools import create_event
+        t = time if time else "09:00"
+        start_dt = f"{date}T{t}:00+09:00"
+        h, m = int(t.split(":")[0]), int(t.split(":")[1])
+        end_h = (h + 1) % 24
+        end_dt = f"{date}T{end_h:02d}:{m:02d}:00+09:00"
+        gcal_result = create_event(title=title, start_datetime=start_dt,
+                                   end_datetime=end_dt, description=description)
+    except Exception as e:
+        gcal_result = {"success": False, "error": str(e)}
+
+    if gcal_result and gcal_result.get("success"):
+        gcal_msg = "Google Calendar 동기화 완료"
+    else:
+        err = gcal_result.get("error", "알 수 없음") if gcal_result else "알 수 없음"
+        gcal_msg = f"Google Calendar 동기화 실패: {err}"
+
+    return {"success": True, "message": f"일정 추가: {date} {time} {title} / {gcal_msg}", "event": event}
 
 
 def list_schedule(date_from: str = "", date_to: str = "") -> dict:
-    """일정 목록을 조회한다.
-    Args:
-        date_from: 조회 시작일 (예: 2026-07-01, 빈 값이면 전체)
-        date_to: 조회 종료일 (빈 값이면 전체)
-    """
     data = _load_schedule()
     events = sorted(data["events"], key=lambda e: (e["date"], e.get("time", "")))
     if date_from:
@@ -162,7 +150,6 @@ def list_schedule(date_from: str = "", date_to: str = "") -> dict:
 
 
 def delete_event(event_id: int) -> dict:
-    """일정을 삭제한다."""
     data = _load_schedule()
     before = len(data["events"])
     data["events"] = [e for e in data["events"] if e["id"] != event_id]
@@ -172,7 +159,7 @@ def delete_event(event_id: int) -> dict:
     return {"success": True, "message": f"삭제 완료: ID {event_id}"}
 
 
-# ── 툴 스키마 등록 ─────────────────────────────────────────
+# 툴 스키마 등록
 
 PLANNER_TOOLS = [
     {
@@ -195,8 +182,8 @@ PLANNER_TOOLS = [
         "input_schema": {
             "type": "object",
             "properties": {
-                "filter_status": {"type": "string", "enum": ["all", "pending", "done"], "description": "상태 필터"},
-                "filter_priority": {"type": "string", "enum": ["all", "high", "medium", "low"], "description": "우선순위 필터"}
+                "filter_status": {"type": "string", "enum": ["all", "pending", "done"]},
+                "filter_priority": {"type": "string", "enum": ["all", "high", "medium", "low"]}
             },
             "required": []
         }
@@ -206,9 +193,7 @@ PLANNER_TOOLS = [
         "description": "할 일을 완료 처리한다.",
         "input_schema": {
             "type": "object",
-            "properties": {
-                "task_id": {"type": "integer", "description": "완료할 할 일의 ID"}
-            },
+            "properties": {"task_id": {"type": "integer", "description": "완료할 할 일의 ID"}},
             "required": ["task_id"]
         }
     },
@@ -217,9 +202,7 @@ PLANNER_TOOLS = [
         "description": "할 일을 삭제한다.",
         "input_schema": {
             "type": "object",
-            "properties": {
-                "task_id": {"type": "integer", "description": "삭제할 할 일의 ID"}
-            },
+            "properties": {"task_id": {"type": "integer", "description": "삭제할 할 일의 ID"}},
             "required": ["task_id"]
         }
     },
@@ -230,17 +213,17 @@ PLANNER_TOOLS = [
             "type": "object",
             "properties": {
                 "task_id": {"type": "integer", "description": "수정할 할 일의 ID"},
-                "title": {"type": "string", "description": "새 제목"},
-                "description": {"type": "string", "description": "새 설명"},
-                "due_date": {"type": "string", "description": "새 마감일"},
-                "priority": {"type": "string", "enum": ["high", "medium", "low"], "description": "새 우선순위"}
+                "title": {"type": "string"},
+                "description": {"type": "string"},
+                "due_date": {"type": "string"},
+                "priority": {"type": "string", "enum": ["high", "medium", "low"]}
             },
             "required": ["task_id"]
         }
     },
     {
         "name": "add_event",
-        "description": "캘린더에 새 일정을 추가한다.",
+        "description": "캘린더에 새 일정을 추가한다. 로컬과 Google Calendar에 동시 저장.",
         "input_schema": {
             "type": "object",
             "properties": {
@@ -269,9 +252,7 @@ PLANNER_TOOLS = [
         "description": "일정을 삭제한다.",
         "input_schema": {
             "type": "object",
-            "properties": {
-                "event_id": {"type": "integer", "description": "삭제할 일정의 ID"}
-            },
+            "properties": {"event_id": {"type": "integer", "description": "삭제할 일정의 ID"}},
             "required": ["event_id"]
         }
     }
@@ -279,7 +260,6 @@ PLANNER_TOOLS = [
 
 
 def execute_tool(tool_name: str, tool_input: dict) -> str:
-    """툴 이름과 입력을 받아 실행하고 JSON 문자열로 반환한다."""
     tool_map = {
         "add_task": add_task,
         "list_tasks": list_tasks,
@@ -292,5 +272,4 @@ def execute_tool(tool_name: str, tool_input: dict) -> str:
     }
     if tool_name not in tool_map:
         return json.dumps({"success": False, "error": f"알 수 없는 툴: {tool_name}"})
-    result = tool_map[tool_name](**tool_input)
-    return json.dumps(result, ensure_ascii=False)
+    return json.dumps(tool_map[tool_name](**tool_input), ensure_ascii=False)

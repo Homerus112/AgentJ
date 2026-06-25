@@ -160,7 +160,7 @@ GCAL_TOOLS = [
         }
     },
     {
-        "name": "delete_event",
+        "name": "delete_gcal_event",
         "description": "Google Calendar 일정을 삭제한다.",
         "input_schema": {
             "type": "object",
@@ -190,7 +190,7 @@ def execute_tool(tool_name: str, tool_input: dict) -> str:
     tool_map = {
         "list_upcoming_events": list_upcoming_events,
         "create_event":         create_event,
-        "delete_event":         delete_event,
+        "delete_gcal_event":    delete_event,
         "search_events":        search_events,
     }
     if tool_name not in tool_map:

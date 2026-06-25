@@ -11,14 +11,21 @@
 
   /* Header */
   header { background: #1a1a1a; border-bottom: 1px solid #2a2a2a;
-           padding: 14px 24px; display: flex; align-items: center; gap: 16px; }
+           padding: 12px 24px; display: flex; align-items: center; gap: 16px; flex-shrink: 0; }
   header h1 { font-size: 18px; font-weight: 600; color: #fff; }
   header h1 span { color: #7c6af7; }
   .stats-bar { display: flex; gap: 20px; margin-left: auto; font-size: 13px; color: #888; }
   .stats-bar strong { color: #ccc; }
 
-  /* Search */
-  .search-wrap { padding: 16px 24px; background: #141414; border-bottom: 1px solid #222; }
+  /* Tabs */
+  .tabs { display: flex; gap: 0; background: #141414; border-bottom: 1px solid #222; flex-shrink: 0; }
+  .tab { padding: 11px 24px; font-size: 13px; color: #666; cursor: pointer;
+         border-bottom: 2px solid transparent; transition: all 0.15s; }
+  .tab:hover { color: #bbb; }
+  .tab.active { color: #7c6af7; border-bottom-color: #7c6af7; }
+
+  /* Search (tab 1) */
+  .search-wrap { padding: 14px 24px; background: #141414; border-bottom: 1px solid #222; flex-shrink: 0; }
   .search-wrap input {
     width: 100%; padding: 10px 16px; border-radius: 8px;
     border: 1px solid #333; background: #1e1e1e; color: #e0e0e0;
@@ -26,149 +33,251 @@
   }
   .search-wrap input:focus { border-color: #7c6af7; }
 
-  /* Layout */
-  .main { display: flex; flex: 1; overflow: hidden; }
+  /* Tab panels */
+  .panel { display: none; flex: 1; overflow: hidden; flex-direction: column; }
+  .panel.active { display: flex; }
 
-  /* Sidebar */
-  .sidebar { width: 300px; border-right: 1px solid #222; overflow-y: auto;
+  /* History layout */
+  .history-layout { display: flex; flex: 1; overflow: hidden; }
+  .sidebar { width: 280px; border-right: 1px solid #222; overflow-y: auto;
              background: #141414; flex-shrink: 0; }
   .sidebar-title { padding: 12px 16px; font-size: 11px; font-weight: 600;
-                   color: #666; text-transform: uppercase; letter-spacing: 0.8px; }
-  .session-item {
-    padding: 12px 16px; border-bottom: 1px solid #1e1e1e; cursor: pointer;
-    transition: background 0.15s;
-  }
+                   color: #555; text-transform: uppercase; letter-spacing: 0.8px; }
+  .session-item { padding: 12px 16px; border-bottom: 1px solid #1e1e1e; cursor: pointer; transition: background 0.15s; }
   .session-item:hover { background: #1e1e1e; }
   .session-item.active { background: #1e1e2e; border-left: 3px solid #7c6af7; }
-  .session-date { font-size: 11px; color: #666; margin-bottom: 4px; }
-  .session-preview { font-size: 13px; color: #bbb; white-space: nowrap;
-                     overflow: hidden; text-overflow: ellipsis; }
-  .session-count { font-size: 11px; color: #555; margin-top: 4px; }
+  .session-date { font-size: 11px; color: #555; margin-bottom: 4px; }
+  .session-preview { font-size: 13px; color: #bbb; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .session-count { font-size: 11px; color: #444; margin-top: 4px; }
 
-  /* Chat area */
   .chat-area { flex: 1; overflow-y: auto; padding: 24px; display: flex; flex-direction: column; gap: 16px; }
-  .empty-state { margin: auto; text-align: center; color: #555; }
-  .empty-state .icon { font-size: 48px; margin-bottom: 12px; }
+  .empty-state { margin: auto; text-align: center; color: #444; }
+  .empty-state .icon { font-size: 42px; margin-bottom: 12px; }
 
-  /* Messages */
-  .msg { display: flex; gap: 12px; max-width: 800px; }
+  .msg { display: flex; gap: 12px; max-width: 780px; }
   .msg.user { flex-direction: row-reverse; align-self: flex-end; }
-  .avatar {
-    width: 32px; height: 32px; border-radius: 50%; display: flex;
-    align-items: center; justify-content: center; font-size: 14px;
-    font-weight: 600; flex-shrink: 0;
-  }
+  .avatar { width: 30px; height: 30px; border-radius: 50%; display: flex;
+            align-items: center; justify-content: center; font-size: 13px;
+            font-weight: 700; flex-shrink: 0; }
   .msg.user .avatar { background: #7c6af7; color: #fff; }
-  .msg.agent .avatar { background: #2a2a2a; color: #aaa; }
-  .bubble {
-    padding: 10px 14px; border-radius: 12px; font-size: 14px;
-    line-height: 1.6; max-width: 600px; white-space: pre-wrap; word-break: break-word;
-  }
+  .msg.agent .avatar { background: #252525; color: #aaa; }
+  .bubble { padding: 10px 14px; border-radius: 12px; font-size: 14px;
+            line-height: 1.6; max-width: 580px; white-space: pre-wrap; word-break: break-word; }
   .msg.user .bubble { background: #2d2560; color: #e0e0e0; border-radius: 12px 12px 2px 12px; }
   .msg.agent .bubble { background: #1e1e1e; color: #e0e0e0; border-radius: 12px 12px 12px 2px; }
   .agent-label { font-size: 11px; color: #7c6af7; margin-bottom: 4px; font-weight: 600; }
-  .msg-time { font-size: 11px; color: #555; margin-top: 4px; }
+  .msg-time { font-size: 11px; color: #444; margin-top: 4px; }
 
-  /* Search results */
-  .search-result {
-    padding: 12px; border-radius: 8px; background: #1a1a1a;
-    border: 1px solid #2a2a2a; cursor: pointer; transition: border-color 0.15s;
-  }
+  .search-result { padding: 12px; border-radius: 8px; background: #1a1a1a;
+                   border: 1px solid #2a2a2a; cursor: pointer; transition: border-color 0.15s; }
   .search-result:hover { border-color: #7c6af7; }
-  .search-result .sr-meta { font-size: 11px; color: #666; margin-bottom: 6px; }
+  .search-result .sr-meta { font-size: 11px; color: #555; margin-bottom: 6px; }
   .search-result .sr-content { font-size: 13px; color: #bbb; }
   mark { background: #3d3060; color: #c9b8ff; border-radius: 2px; padding: 0 2px; }
 
-  /* Scrollbar */
-  ::-webkit-scrollbar { width: 6px; }
+  /* Essay tab */
+  .essay-panel { flex: 1; overflow-y: auto; padding: 28px; display: flex; gap: 24px; }
+  .essay-left { flex: 1; display: flex; flex-direction: column; gap: 14px; }
+  .essay-right { flex: 1; display: flex; flex-direction: column; gap: 14px; }
+
+  .panel-label { font-size: 12px; font-weight: 600; color: #666; text-transform: uppercase; letter-spacing: 0.6px; }
+
+  .drop-zone {
+    border: 2px dashed #333; border-radius: 10px; padding: 28px; text-align: center;
+    cursor: pointer; transition: border-color 0.2s, background 0.2s; color: #555;
+  }
+  .drop-zone:hover, .drop-zone.drag-over { border-color: #7c6af7; background: #1a1a2e; color: #aaa; }
+  .drop-zone .dz-icon { font-size: 32px; margin-bottom: 8px; }
+  .drop-zone .dz-hint { font-size: 13px; }
+  .drop-zone .dz-sub { font-size: 11px; color: #444; margin-top: 4px; }
+
+  textarea.essay-input {
+    flex: 1; min-height: 180px; padding: 14px; border-radius: 8px;
+    border: 1px solid #333; background: #1a1a1a; color: #e0e0e0;
+    font-size: 14px; line-height: 1.6; resize: vertical; outline: none;
+    font-family: inherit;
+  }
+  textarea.essay-input:focus { border-color: #7c6af7; }
+
+  input.instruction-input {
+    width: 100%; padding: 10px 14px; border-radius: 8px;
+    border: 1px solid #333; background: #1a1a1a; color: #e0e0e0;
+    font-size: 14px; outline: none;
+  }
+  input.instruction-input:focus { border-color: #7c6af7; }
+
+  .btn-primary {
+    padding: 11px 24px; border-radius: 8px; background: #7c6af7; color: #fff;
+    border: none; font-size: 14px; font-weight: 600; cursor: pointer; transition: background 0.15s;
+  }
+  .btn-primary:hover { background: #6a5ae0; }
+  .btn-primary:disabled { background: #333; color: #666; cursor: not-allowed; }
+
+  .result-box {
+    flex: 1; min-height: 300px; padding: 16px; border-radius: 8px;
+    border: 1px solid #2a2a2a; background: #141414; font-size: 14px;
+    line-height: 1.7; color: #ccc; overflow-y: auto; white-space: pre-wrap; word-break: break-word;
+  }
+  .result-placeholder { color: #444; }
+  .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid #555;
+             border-top-color: #7c6af7; border-radius: 50%; animation: spin 0.8s linear infinite;
+             vertical-align: middle; margin-right: 8px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Profile tab */
+  .profile-panel { flex: 1; overflow-y: auto; padding: 28px; display: flex; flex-direction: column; gap: 20px; }
+  .profile-card { background: #141414; border: 1px solid #222; border-radius: 10px; padding: 20px; }
+  .profile-card h3 { font-size: 13px; font-weight: 600; color: #7c6af7; margin-bottom: 14px;
+                     text-transform: uppercase; letter-spacing: 0.6px; }
+  .profile-row { display: flex; gap: 8px; margin-bottom: 8px; font-size: 14px; }
+  .profile-key { color: #666; min-width: 120px; flex-shrink: 0; }
+  .profile-val { color: #ccc; }
+  .tag { display: inline-block; padding: 2px 10px; border-radius: 12px; background: #1e1e2e;
+         color: #7c6af7; font-size: 12px; margin: 2px; border: 1px solid #2d2560; }
+  .evolve-btn-wrap { display: flex; align-items: center; gap: 14px; }
+  .evolve-hint { font-size: 12px; color: #555; }
+  .profile-empty { color: #444; font-size: 14px; }
+
+  ::-webkit-scrollbar { width: 5px; }
   ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+  ::-webkit-scrollbar-thumb { background: #2a2a2a; border-radius: 3px; }
 </style>
 </head>
 <body>
 
 <header>
   <h1><span>Agent J</span> Dashboard</h1>
-  <div class="stats-bar" id="stats">
+  <div class="stats-bar">
     <span>세션 <strong id="stat-sessions">-</strong></span>
     <span>메시지 <strong id="stat-msgs">-</strong></span>
   </div>
 </header>
 
-<div class="search-wrap">
-  <input type="text" id="search-input" placeholder="🔍  대화 내용 검색..." />
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('history')">💬 대화 히스토리</div>
+  <div class="tab" onclick="switchTab('essay')">✍️ 에세이 첨삭</div>
+  <div class="tab" onclick="switchTab('profile')">🧠 나의 프로필</div>
 </div>
 
-<div class="main">
-  <div class="sidebar">
-    <div class="sidebar-title">최근 대화</div>
-    <div id="session-list"></div>
+<!-- ── 탭 1: 히스토리 ── -->
+<div class="panel active" id="panel-history" style="flex-direction:column;">
+  <div class="search-wrap">
+    <input type="text" id="search-input" placeholder="🔍  대화 내용 검색..." />
   </div>
-  <div class="chat-area" id="chat-area">
-    <div class="empty-state">
-      <div class="icon">💬</div>
-      <div>왼쪽에서 세션을 선택하거나<br>검색어를 입력하세요</div>
+  <div class="history-layout">
+    <div class="sidebar">
+      <div class="sidebar-title">최근 대화</div>
+      <div id="session-list"></div>
+    </div>
+    <div class="chat-area" id="chat-area">
+      <div class="empty-state">
+        <div class="icon">💬</div>
+        <div>세션을 선택하거나 검색어를 입력하세요</div>
+      </div>
     </div>
   </div>
 </div>
 
+<!-- ── 탭 2: 에세이 첨삭 ── -->
+<div class="panel" id="panel-essay">
+  <div class="essay-panel">
+    <div class="essay-left">
+      <div class="panel-label">원본 문서</div>
+
+      <!-- 드래그앤드롭 업로드 -->
+      <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
+        <div class="dz-icon">📄</div>
+        <div class="dz-hint">파일을 드래그하거나 클릭해서 업로드</div>
+        <div class="dz-sub">.txt · .md · .docx 지원 (최대 5MB)</div>
+      </div>
+      <input type="file" id="file-input" accept=".txt,.md,.docx" style="display:none">
+
+      <div class="panel-label" style="margin-top:4px;">또는 직접 입력</div>
+      <textarea class="essay-input" id="essay-text" placeholder="에세이 내용을 여기에 붙여넣으세요..."></textarea>
+
+      <div class="panel-label">첨삭 지시</div>
+      <input class="instruction-input" id="essay-instruction"
+             value="이 글을 첨삭해줘. 구조, 흐름, 논리를 중심으로 개선점을 알려줘."
+             placeholder="첨삭 방향을 입력하세요">
+
+      <button class="btn-primary" id="submit-btn" onclick="submitEssay()">✍️ 첨삭 요청</button>
+    </div>
+
+    <div class="essay-right">
+      <div class="panel-label">첨삭 결과</div>
+      <div class="result-box" id="essay-result">
+        <span class="result-placeholder">첨삭 결과가 여기에 표시됩니다.</span>
+      </div>
+      <button class="btn-primary" id="copy-btn" style="display:none;background:#252525;color:#bbb;"
+              onclick="copyResult()">📋 결과 복사</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── 탭 3: 프로필 ── -->
+<div class="panel" id="panel-profile">
+  <div class="profile-panel" id="profile-content">
+    <div class="profile-empty">프로필을 불러오는 중...</div>
+  </div>
+</div>
+
 <script>
+// ── 탭 전환 ─────────────────────────────────────────────────────────
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach((t, i) => {
+    t.classList.toggle('active', ['history','essay','profile'][i] === name);
+  });
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('panel-' + name).classList.add('active');
+  if (name === 'profile') loadProfile();
+}
+
+// ── 히스토리 탭 ─────────────────────────────────────────────────────
 const chatArea = document.getElementById('chat-area');
 const sessionList = document.getElementById('session-list');
 const searchInput = document.getElementById('search-input');
-let activeSessionId = null;
 let searchTimeout = null;
 
-// 통계 로드
 fetch('/api/stats').then(r => r.json()).then(d => {
   document.getElementById('stat-sessions').textContent = d.total_sessions;
   document.getElementById('stat-msgs').textContent = d.total_messages;
 });
 
-// 세션 목록 로드
 function loadSessions() {
   fetch('/api/sessions').then(r => r.json()).then(sessions => {
     sessionList.innerHTML = sessions.length === 0
-      ? '<div style="padding:16px;color:#555;font-size:13px;">아직 대화 기록이 없어요</div>'
+      ? '<div style="padding:16px;color:#444;font-size:13px;">아직 대화 기록이 없어요</div>'
       : sessions.map(s => `
         <div class="session-item" onclick="loadSession('${s.session_id}')" data-id="${s.session_id}">
           <div class="session-date">${formatDate(s.started_at)}</div>
           <div class="session-preview">${escHtml(s.first_message || '(빈 세션)')}</div>
           <div class="session-count">${s.message_count}개 메시지</div>
-        </div>
-      `).join('');
+        </div>`).join('');
   });
 }
 
-// 세션 대화 로드
 function loadSession(sessionId) {
-  activeSessionId = sessionId;
-  document.querySelectorAll('.session-item').forEach(el => {
-    el.classList.toggle('active', el.dataset.id === sessionId);
-  });
+  document.querySelectorAll('.session-item').forEach(el =>
+    el.classList.toggle('active', el.dataset.id === sessionId));
   fetch(`/api/session/${sessionId}`).then(r => r.json()).then(msgs => {
-    chatArea.innerHTML = msgs.map(m => renderMsg(m)).join('');
+    chatArea.innerHTML = msgs.map(renderMsg).join('');
     chatArea.scrollTop = chatArea.scrollHeight;
   });
 }
 
-// 검색
 searchInput.addEventListener('input', () => {
   clearTimeout(searchTimeout);
   const q = searchInput.value.trim();
-  if (!q) { loadSessions(); return; }
+  if (!q) { loadSessions(); chatArea.innerHTML = '<div class="empty-state"><div class="icon">💬</div><div>세션을 선택하거나 검색어를 입력하세요</div></div>'; return; }
   searchTimeout = setTimeout(() => {
     fetch(`/api/search?q=${encodeURIComponent(q)}`).then(r => r.json()).then(results => {
-      if (results.length === 0) {
-        chatArea.innerHTML = '<div class="empty-state"><div class="icon">🔍</div><div>검색 결과 없음</div></div>';
-        return;
-      }
-      chatArea.innerHTML = results.map(r => `
-        <div class="search-result" onclick="loadSession('${r.session_id}')">
-          <div class="sr-meta">${formatDate(r.timestamp)} · ${r.role === 'user' ? '나' : (r.agent || 'Agent J')}</div>
-          <div class="sr-content">${highlight(escHtml(r.content), q)}</div>
-        </div>
-      `).join('');
+      chatArea.innerHTML = results.length === 0
+        ? '<div class="empty-state"><div class="icon">🔍</div><div>검색 결과 없음</div></div>'
+        : results.map(r => `
+          <div class="search-result" onclick="loadSession('${r.session_id}')">
+            <div class="sr-meta">${formatDate(r.timestamp)} · ${r.role==='user'?'나':(r.agent||'Agent J')}</div>
+            <div class="sr-content">${highlight(escHtml(r.content), q)}</div>
+          </div>`).join('');
     });
   }, 300);
 });
@@ -176,31 +285,156 @@ searchInput.addEventListener('input', () => {
 function renderMsg(m) {
   const isUser = m.role === 'user';
   const avatar = isUser ? 'J' : (m.agent ? m.agent[0].toUpperCase() : 'A');
-  const agentLabel = !isUser && m.agent ? `<div class="agent-label">${m.agent}</div>` : '';
-  return `
-    <div class="msg ${isUser ? 'user' : 'agent'}">
-      <div class="avatar">${avatar}</div>
-      <div>
-        ${agentLabel}
-        <div class="bubble">${escHtml(m.content)}</div>
-        <div class="msg-time">${formatDate(m.timestamp)}</div>
-      </div>
-    </div>
-  `;
+  const label = !isUser && m.agent ? `<div class="agent-label">${m.agent}</div>` : '';
+  return `<div class="msg ${isUser?'user':'agent'}">
+    <div class="avatar">${avatar}</div>
+    <div>${label}<div class="bubble">${escHtml(m.content)}</div>
+    <div class="msg-time">${formatDate(m.timestamp)}</div></div></div>`;
 }
 
+// ── 에세이 첨삭 탭 ──────────────────────────────────────────────────
+let uploadedFile = null;
+
+const dropZone = document.getElementById('drop-zone');
+const fileInput = document.getElementById('file-input');
+
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault(); dropZone.classList.remove('drag-over');
+  const f = e.dataTransfer.files[0];
+  if (f) setFile(f);
+});
+fileInput.addEventListener('change', () => { if (fileInput.files[0]) setFile(fileInput.files[0]); });
+
+function setFile(f) {
+  uploadedFile = f;
+  dropZone.innerHTML = `<div class="dz-icon">✅</div><div class="dz-hint">${escHtml(f.name)}</div><div class="dz-sub">${(f.size/1024).toFixed(1)} KB · 클릭해서 변경</div>`;
+}
+
+async function submitEssay() {
+  const text = document.getElementById('essay-text').value.trim();
+  const instruction = document.getElementById('essay-instruction').value.trim();
+  const resultBox = document.getElementById('essay-result');
+  const btn = document.getElementById('submit-btn');
+
+  if (!uploadedFile && !text) {
+    resultBox.innerHTML = '<span style="color:#e55;">파일을 업로드하거나 텍스트를 입력하세요.</span>';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>첨삭 중...';
+  resultBox.innerHTML = '<span class="spinner"></span><span style="color:#666;">Writer Agent가 첨삭 중입니다... (30초~1분 소요)</span>';
+  document.getElementById('copy-btn').style.display = 'none';
+
+  const fd = new FormData();
+  fd.append('instruction', instruction || '이 글을 첨삭해줘');
+  if (uploadedFile) fd.append('file', uploadedFile);
+  else fd.append('text', text);
+
+  try {
+    const res = await fetch('/api/upload-essay', { method: 'POST', body: fd });
+    const data = await res.json();
+    if (data.success) {
+      resultBox.textContent = data.result;
+      document.getElementById('copy-btn').style.display = 'block';
+    } else {
+      resultBox.innerHTML = `<span style="color:#e55;">오류: ${escHtml(data.error)}</span>`;
+    }
+  } catch(e) {
+    resultBox.innerHTML = `<span style="color:#e55;">요청 실패: ${e.message}</span>`;
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = '✍️ 첨삭 요청';
+}
+
+function copyResult() {
+  const text = document.getElementById('essay-result').textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('copy-btn');
+    btn.textContent = '✅ 복사됨';
+    setTimeout(() => btn.innerHTML = '📋 결과 복사', 1500);
+  });
+}
+
+// ── 프로필 탭 ────────────────────────────────────────────────────────
+function loadProfile() {
+  const el = document.getElementById('profile-content');
+  fetch('/api/user-profile').then(r => r.json()).then(p => {
+    if (!p || Object.keys(p).length === 0) {
+      el.innerHTML = `
+        <div class="profile-card">
+          <h3>🧠 아직 프로필이 없어요</h3>
+          <p class="profile-empty" style="margin-bottom:16px;">
+            Agent J와 대화를 나눈 뒤 <code>/evolve</code> 명령어를 실행하면<br>
+            나의 말투·관심사·선호 방식을 분석해서 에이전트가 나에게 최적화돼요.
+          </p>
+          <div class="evolve-btn-wrap">
+            <button class="btn-primary" onclick="runEvolve()">🚀 지금 분석 시작</button>
+            <span class="evolve-hint">main.py에서 /evolve 로도 실행 가능</span>
+          </div>
+        </div>`;
+      return;
+    }
+
+    const tags = arr => (arr || []).map(t => `<span class="tag">${escHtml(t)}</span>`).join('');
+
+    el.innerHTML = `
+      <div class="profile-card">
+        <h3>👤 말투 & 스타일</h3>
+        ${row('언어', p.language)} ${row('말투', p.speech_style)} ${row('기술 수준', p.expertise_level)}
+        ${row('선호 응답 길이', p.preferred_response_length)} ${row('선호 형식', p.preferred_format)}
+      </div>
+      <div class="profile-card">
+        <h3>🎯 자주 다루는 주제</h3>
+        <div style="margin-top:4px;">${tags(p.frequent_topics)}</div>
+      </div>
+      <div class="profile-card">
+        <h3>⚙️ 에이전트 커스텀 지시</h3>
+        <p style="font-size:13px;color:#aaa;line-height:1.7;white-space:pre-wrap;">${escHtml(p.custom_instructions || '없음')}</p>
+      </div>
+      <div class="profile-card">
+        <h3>📅 마지막 분석</h3>
+        ${row('일시', p.last_analyzed ? formatDate(p.last_analyzed) : '없음')}
+        ${row('분석한 메시지 수', p.analyzed_message_count || '-')}
+        <div class="evolve-btn-wrap" style="margin-top:14px;">
+          <button class="btn-primary" onclick="runEvolve()">🔄 프로필 재분석</button>
+          <span class="evolve-hint">대화가 쌓일수록 정확해져요</span>
+        </div>
+      </div>`;
+  });
+}
+
+function row(k, v) {
+  if (!v) return '';
+  return `<div class="profile-row"><span class="profile-key">${k}</span><span class="profile-val">${escHtml(String(v))}</span></div>`;
+}
+
+async function runEvolve() {
+  const el = document.getElementById('profile-content');
+  el.innerHTML = '<div class="profile-empty"><span class="spinner"></span> 대화 히스토리 분석 중... (30초~1분)</div>';
+  try {
+    const res = await fetch('/api/evolve', { method: 'POST' });
+    const data = await res.json();
+    if (data.success) loadProfile();
+    else el.innerHTML = `<div class="profile-empty" style="color:#e55;">분석 실패: ${escHtml(data.error)}</div>`;
+  } catch(e) {
+    el.innerHTML = `<div class="profile-empty" style="color:#e55;">요청 실패: ${e.message}</div>`;
+  }
+}
+
+// ── 공통 유틸 ────────────────────────────────────────────────────────
 function formatDate(iso) {
   if (!iso) return '';
-  const d = new Date(iso);
-  return d.toLocaleString('ko-KR', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+  return new Date(iso).toLocaleString('ko-KR', { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' });
 }
-
-function escHtml(str) {
-  return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+function escHtml(s) {
+  return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
-
-function highlight(str, q) {
-  return str.replace(new RegExp(escHtml(q), 'gi'), m => `<mark>${m}</mark>`);
+function highlight(s, q) {
+  return s.replace(new RegExp(escHtml(q),'gi'), m=>`<mark>${m}</mark>`);
 }
 
 loadSessions();

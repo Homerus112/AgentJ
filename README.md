@@ -23,7 +23,7 @@ Orchestrator (claude-haiku)
 └── LLM 라우팅 → 에이전트 선택
         │
         ├── 💻 Dev Agent (claude-sonnet)
-        ├── 📅 Planner Agent (claude-haiku)
+        ├── 📅 Planner Agent (claude-haiku) ← Google Calendar 자동 동기화
         ├── ✍️  Writer Agent (claude-sonnet)
         ├── 📰 News Agent (claude-haiku)
         ├── 📊 Slide Agent (claude-sonnet)
@@ -59,16 +59,21 @@ Orchestrator (claude-haiku)
 - 에이전트 사용 통계 추적
 
 ### Phase 5 — 외부 서비스 연동
-- **Notion**: 할 일 동기화, 리서치 결과 페이지 저장, 리서치 Notion 자동 저장
-- **Google Calendar**: 일정 추가·조회 (OAuth 2.0)
+- **Notion**: 할 일 동기화, 리서치 결과 페이지 저장
+- **Google Calendar**: OAuth 2.0 기반 일정 추가·조회
 - **Research Agent**: DuckDuckGo 무료 검색 → 요약 → Notion 저장
 
-### Phase 6 — 대시보드 · Reflection · Job Tracker
+### Phase 6 — 대시보드 · Reflection · Job Tracker · 날씨
 - **웹 대시보드** (`Flask`): `localhost:5000`에서 대화 히스토리 검색·열람
 - **Reflection Agent**: `/reflect`로 오늘 하루 회고 생성 → Notion 저장
 - **Job Tracker**: 채용 지원 내역 Notion DB 관리 (`/jobs`)
-- **Weather Tool**: OpenWeatherMap API 실시간 날씨 조회
-- **Daily Reflection 자동화**: `python main.py --reflect` (스케줄러 연동 가능)
+- **Weather Tool**: OpenWeatherMap API 실시간 날씨 조회 (토큰 소모 없음)
+- **Daily Reflection 자동화**: `python main.py --reflect` (작업 스케줄러 연동 가능)
+
+### 버그픽스 및 개선
+- `/schedule` 일정 추가 시 **로컬 저장 + Google Calendar 자동 동기화** 동시 실행
+- Planner Agent 툴 이름 중복(`delete_event`) 제거 → `delete_gcal_event`로 분리
+- 날씨 키워드(`날씨`, `기온`, `비 오나` 등) 라우터 선처리 추가
 
 ---
 
@@ -91,7 +96,7 @@ Agent J/
 │   └── reflection_agent.py
 ├── tools/
 │   ├── file_tools.py
-│   ├── planner_tools.py
+│   ├── planner_tools.py             ← 일정 추가 시 Google Calendar 자동 동기화
 │   ├── news_tools.py
 │   ├── slide_tools.py
 │   ├── career_tools_v2.py           ← Notion Job Tracker
@@ -102,7 +107,7 @@ Agent J/
 │   └── weather_tools.py
 ├── memory/
 │   ├── memory_manager.py            ← 세션 간 지속 메모리
-│   ├── history_db.py                ← 대화 히스토리 DB
+│   ├── history_db.py                ← 대화 히스토리 DB (SQLite)
 │   └── context.json
 ├── web/
 │   ├── app.py                       ← Flask 대시보드
@@ -113,9 +118,9 @@ Agent J/
 │   └── career.json
 ├── news_digest.py                   ← GitHub Actions 뉴스 이메일
 ├── .github/workflows/daily_news.yml ← 매일 7시 KST 자동 실행
-├── setup_google_auth.py             ← Google Calendar OAuth 초기 인증
-├── run.bat                          ← Windows 실행 스크립트
-├── start_dashboard.bat
+├── setup_google_auth.py             ← Google Calendar OAuth 초기 인증 (1회)
+├── run.bat                          ← Agent J 실행
+├── start_dashboard.bat              ← 웹 대시보드 실행
 └── requirements.txt
 ```
 
@@ -132,7 +137,7 @@ cd agent-j
 python -m venv venv
 venv\Scripts\activate          # Windows
 pip install -r requirements.txt
-pip install requests notion-client   # 추가 패키지
+pip install flask requests notion-client
 ```
 
 ### 2. `.env` 파일 생성
@@ -141,7 +146,7 @@ pip install requests notion-client   # 추가 패키지
 # 필수
 ANTHROPIC_API_KEY=sk-ant-...
 
-# 날씨
+# 날씨 (https://openweathermap.org 무료 발급)
 OPENWEATHER_API_KEY=...
 OPENWEATHER_CITY=Seoul
 
@@ -151,18 +156,32 @@ NOTION_TASKS_DB_ID=...
 NOTION_PARENT_PAGE_ID=...
 NOTION_JOBS_DB_ID=...
 
-# 모델 설정
+# 모델 설정 (비용 최적화)
 ORCHESTRATOR_MODEL=claude-haiku-4-5-20251001
 PLANNER_MODEL=claude-haiku-4-5-20251001
 DEV_MODEL=claude-sonnet-4-6
 ```
 
-### 3. 실행
+### 3. Google Calendar 초기 인증 (1회)
 
 ```bash
-python main.py          # 기본 실행
-python main.py --reflect   # 오늘 회고 자동 생성
-python web/app.py          # 웹 대시보드 (localhost:5000)
+python setup_google_auth.py
+```
+
+### 4. 실행
+
+```bash
+# Agent J 시작
+python main.py
+
+# 또는 배치 파일
+run.bat
+
+# 오늘 회고 자동 생성
+python main.py --reflect
+
+# 웹 대시보드 (localhost:5000)
+start_dashboard.bat
 ```
 
 ---
@@ -172,15 +191,17 @@ python web/app.py          # 웹 대시보드 (localhost:5000)
 | 입력 | 라우팅 |
 |------|--------|
 | "파이썬으로 CSV 읽는 코드 짜줘" | Dev Agent |
-| "내일 오후 3시 팀 미팅 추가해줘" | Planner Agent |
+| "내일 오후 3시 팀 미팅 추가해줘" | Planner Agent + Google Calendar |
 | "오늘 테크 뉴스 요약해줘" | News Agent |
 | "AI 트렌드 발표자료 8장 만들어줘" | Slide Agent |
-| "Google SWE 인턴 지원 추가해줘" | Career (Notion 저장) |
-| "GPT-4o 논문 조사해줘" | Research Agent |
-| "오늘 날씨 어때?" | Weather Tool (토큰 0) |
-| `/reflect` | Reflection Agent |
+| "Google SWE 인턴 지원 추가해줘" | Career → Notion Job Tracker |
+| "GPT-4o 논문 조사해줘" | Research Agent → Notion 저장 |
+| "오늘 날씨 어때?" | Weather Tool (토큰 소모 없음) |
+| `/reflect` | Reflection Agent → Notion 저장 |
 | `/jobs` | Job Tracker 조회 |
+| `/schedule` | 일정 조회 |
 | `/stats` | 에이전트 사용 통계 |
+| `/dashboard` | 웹 대시보드 열기 |
 
 ---
 
@@ -188,7 +209,8 @@ python web/app.py          # 웹 대시보드 (localhost:5000)
 
 - **비용 최적화**: 라우터는 Haiku, 고품질 작업(Dev·Writer·Slide)만 Sonnet 사용
 - **키워드 선처리**: 날씨 등 반복 요청은 LLM 없이 tool 직접 호출로 토큰 절약
-- **세션 지속 메모리**: 종료 후에도 이전 대화 히스토리 유지
+- **Google Calendar 이중 저장**: `add_event` 호출 시 로컬 JSON + Google Calendar 동시 저장 (gcal 실패해도 로컬 보존)
+- **세션 지속 메모리**: 종료 후에도 이전 대화 히스토리 유지 (SQLite)
 - **GitHub Actions**: 뉴스 이메일 자동화 (Anthropic 크레딧 사용)
 
 ---

@@ -116,4 +116,19 @@ def send_digest(summaries: dict):
         print(f"❌ 발송 실패: {result['error']}")
         sys.exit(1)
 
-# ── 메인 ───�
+# ── 메인 ──────────────────────────────────────────────────
+def main():
+    print("=" * 50)
+    print(f"  Agent J — Daily News Digest")
+    print(f"  {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print("=" * 50)
+
+    check_env()
+    news      = fetch_all_news()
+    summaries = summarize_news(news)
+    send_digest(summaries)
+
+    print("\n✅ 완료!")
+
+if __name__ == "__main__":
+    main()

@@ -44,7 +44,7 @@ def print_welcome(history_turns: int = 0):
         "🎯 [red]Career[/red]    커리어·취업 관리\n"
         "🔬 [white]Research[/white]  웹 조사 + Notion 저장\n\n"
         "[dim]/help  /memory  /stats  /tasks  /schedule  /career  /jobs[/dim]\n"
-        "[dim]/reflect  /weekly  /dashboard  /clear  /exit[/dim]"
+        "[dim]/reflect  /weekly  /evolve  /dashboard  /clear  /exit[/dim]"
         + memory_note,
         title="🤖 J", border_style="cyan"
     ))
@@ -72,6 +72,7 @@ def print_help():
 | `/jobs` | 채용 지원 현황 |
 | `/reflect` | 오늘 회고 작성 |
 | `/weekly` | 주간 회고 생성 |
+| `/evolve` | 대화 분석 → 에이전트 자기 최적화 |
 | `/dashboard` | 대화 히스토리 대시보드 열기 |
 | `/clear` | 대화 초기화 |
 | `/exit` | 저장 후 종료 |
@@ -146,4 +147,132 @@ def handle_special_commands(cmd: str, orchestrator) -> bool:
             extra = cmd.replace("/reflect", "").strip()
             console.print("[dim]  회고 작성 중...[/dim]")
             result = run_reflection(user_input=extra if extra else None)
-            console
+            console.print(Panel(Markdown(result), title="📝 Daily Reflection", border_style="magenta"))
+        except Exception as e:
+            console.print(f"[red]오류: {e}[/red]")
+        return True
+
+    elif cmd == "/weekly":
+        try:
+            from agents.reflection_agent import run_weekly_reflection
+            console.print("[dim]  주간 회고 생성 중...[/dim]")
+            result = run_weekly_reflection()
+            console.print(Panel(Markdown(result), title="📊 주간 회고", border_style="magenta"))
+        except Exception as e:
+            console.print(f"[red]오류: {e}[/red]")
+        return True
+
+    elif cmd == "/evolve":
+        try:
+            from agents.personalization_agent import run_personalization
+            console.print("[dim]  대화 히스토리 분석 중... (30초~1분 소요)[/dim]")
+            result = run_personalization()
+            if result["success"]:
+                p = result["profile"]
+                summary = (
+                    f"**분석 완료!** {p.get('analyzed_message_count', '?')}개 메시지 학습\n\n"
+                    f"**말투:** {p.get('speech_style', '-')}\n"
+                    f"**기술 수준:** {p.get('expertise_level', '-')}\n"
+                    f"**자주 다루는 주제:** {', '.join(p.get('frequent_topics', []))}\n"
+                    f"**선호 형식:** {p.get('preferred_format', '-')}\n\n"
+                    f"**커스텀 지시:**\n{p.get('custom_instructions', '-')}\n\n"
+                    f"_이제 모든 에이전트가 이 프로필을 반영해서 응답합니다._"
+                )
+                console.print(Panel(Markdown(summary), title="🧠 사용자 프로필 업데이트", border_style="magenta"))
+            else:
+                console.print(f"[red]{result['error']}[/red]")
+        except Exception as e:
+            console.print(f"[red]오류: {e}[/red]")
+        return True
+
+    elif cmd == "/dashboard":
+        import webbrowser, subprocess, threading
+        def _start():
+            subprocess.Popen(
+                [sys.executable, str(Path(__file__).parent / "web" / "app.py")],
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+            )
+        threading.Thread(target=_start, daemon=True).start()
+        import time; time.sleep(1)
+        webbrowser.open("http://localhost:5000")
+        console.print("[cyan]🌐 대시보드 열기: http://localhost:5000[/cyan]")
+        return True
+
+    return False
+
+
+def main():
+    # CLI 인자 파싱 (커맨드 팔레트 / 자동 회고 지원)
+    parser = argparse.ArgumentParser(add_help=False)
+    parser.add_argument("--cmd", type=str, default=None)
+    parser.add_argument("--reflect", action="store_true")
+    args, _ = parser.parse_known_args()
+
+    if not check_setup():
+        sys.exit(1)
+
+    os.chdir(Path(__file__).parent)
+
+    # 대화 히스토리 DB 초기화
+    try:
+        from memory.history_db import save_message, init_db
+        init_db()
+        history_enabled = True
+    except Exception:
+        history_enabled = False
+
+    session_id = str(uuid.uuid4())[:8]
+
+    # --reflect 플래그: 자동 회고 후 종료
+    if args.reflect:
+        from agents.reflection_agent import run_reflection
+        print(run_reflection(auto_mode=True))
+        sys.exit(0)
+
+    from orchestrator.router import Orchestrator
+    orchestrator = Orchestrator()
+
+    # --cmd 플래그: 단일 명령 실행 후 종료 (커맨드 팔레트용)
+    if args.cmd:
+        if history_enabled:
+            save_message(session_id, "user", args.cmd)
+        response = orchestrator.route(args.cmd)
+        if history_enabled:
+            save_message(session_id, "agent", response)
+        console.print(Panel(Markdown(response), title="[bold green]J[/bold green]", border_style="green"))
+        sys.exit(0)
+
+    history_turns = len(orchestrator.conversation_history) // 2
+    print_welcome(history_turns)
+
+    while True:
+        try:
+            user_input = Prompt.ask("\n[bold cyan]You[/bold cyan]").strip()
+            if not user_input:
+                continue
+
+            if user_input.startswith("/"):
+                handle_special_commands(user_input.lower() if not user_input.lower().startswith("/remember") else user_input, orchestrator)
+                continue
+
+            # 히스토리 저장 (user)
+            if history_enabled:
+                save_message(session_id, "user", user_input)
+
+            response = orchestrator.route(user_input)
+            console.print(Panel(Markdown(response), title="[bold green]J[/bold green]", border_style="green"))
+
+            # 히스토리 저장 (agent)
+            if history_enabled:
+                save_message(session_id, "agent", response, agent=getattr(orchestrator, "last_agent", None))
+
+        except KeyboardInterrupt:
+            orchestrator.save_and_exit()
+            console.print("\n[yellow]세션 저장 완료. (Ctrl+C)[/yellow]")
+            sys.exit(0)
+        except Exception as e:
+            console.print(f"[red]오류: {e}[/red]")
+
+
+if __name__ == "__main__":
+    main()

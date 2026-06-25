@@ -35,10 +35,16 @@ class BaseAgent:
     ):
         self.client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
         self.model = model
-        self.system_prompt = system_prompt
         self.tools = tools
         self.tool_executor = tool_executor
         self.name = name
+
+        # 사용자 맞춤 프로필을 시스템 프롬프트에 자동 주입
+        try:
+            from agents.personalization_agent import get_profile_injection
+            self.system_prompt = system_prompt + get_profile_injection()
+        except Exception:
+            self.system_prompt = system_prompt
 
     def run(self, user_message: str, conversation_history: list = None) -> str:
         """

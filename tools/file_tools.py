@@ -71,6 +71,39 @@ def run_python(code: str) -> dict:
         return {"success": False, "error": str(e)}
 
 
+def read_document(path: str) -> dict:
+    """
+    .txt / .md / .docx 파일을 읽어 텍스트로 반환한다.
+    Writer Agent 전용 — 에세이·문서 첨삭에 사용.
+    """
+    try:
+        p = Path(path)
+        if not p.exists():
+            return {"success": False, "error": f"파일을 찾을 수 없음: {path}"}
+
+        ext = p.suffix.lower()
+
+        if ext in (".txt", ".md"):
+            content = p.read_text(encoding="utf-8")
+            return {"success": True, "content": content, "path": str(p.resolve()), "format": ext}
+
+        elif ext == ".docx":
+            try:
+                import docx
+                doc = docx.Document(str(p))
+                paragraphs = [para.text for para in doc.paragraphs if para.text.strip()]
+                content = "\n\n".join(paragraphs)
+                return {"success": True, "content": content, "path": str(p.resolve()), "format": ".docx"}
+            except ImportError:
+                return {"success": False, "error": "python-docx 미설치: pip install python-docx"}
+
+        else:
+            return {"success": False, "error": f"지원하지 않는 형식: {ext} (지원: .txt .md .docx)"}
+
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
 def create_directory(path: str) -> dict:
     """디렉토리를 생성한다 (이미 있어도 오류 없음)."""
     try:
@@ -137,6 +170,17 @@ DEV_TOOLS = [
             },
             "required": ["path"]
         }
+    },
+    {
+        "name": "read_document",
+        "description": ".txt / .md / .docx 문서를 읽어 텍스트로 반환한다. 에세이·문서 첨삭 시 사용.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "path": {"type": "string", "description": "읽을 문서 파일 경로 (.txt .md .docx)"}
+            },
+            "required": ["path"]
+        }
     }
 ]
 
@@ -149,7 +193,8 @@ def execute_tool(tool_name: str, tool_input: dict) -> str:
         "write_file": write_file,
         "list_files": list_files,
         "run_python": run_python,
-        "create_directory": create_directory
+        "create_directory": create_directory,
+        "read_document": read_document,
     }
     if tool_name not in tool_map:
         return json.dumps({"success": False, "error": f"알 수 없는 툴: {tool_name}"})

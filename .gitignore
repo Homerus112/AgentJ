@@ -25,4 +25,5 @@ logs/
 Thumbs.db
 
 credentials.json
-data/google_t
+data/google_token.json
+.env

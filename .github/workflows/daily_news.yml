@@ -1,13 +1,13 @@
-name: Agent J — Daily News Digest
+name: Agent J — Daily Briefing
 
 on:
   schedule:
     # 매일 오전 7시 KST = 22:00 UTC (전날)
     - cron: '0 22 * * *'
-  workflow_dispatch:  # 수동 테스트 실행 버튼
+  workflow_dispatch:  # 수동 실행 버튼
 
 jobs:
-  send-digest:
+  send-briefing:
     runs-on: ubuntu-latest
 
     steps:
@@ -20,13 +20,19 @@ jobs:
           python-version: '3.11'
 
       - name: Install dependencies
-        run: pip install anthropic python-dotenv feedparser
+        run: |
+          pip install anthropic python-dotenv feedparser requests
 
-      - name: Run news digest
+      - name: Run daily briefing
         env:
           ANTHROPIC_API_KEY:   ${{ secrets.ANTHROPIC_API_KEY }}
           GMAIL_ADDRESS:       ${{ secrets.GMAIL_ADDRESS }}
           GMAIL_APP_PASSWORD:  ${{ secrets.GMAIL_APP_PASSWORD }}
           DIGEST_RECIPIENT:    ${{ secrets.DIGEST_RECIPIENT }}
           PLANNER_MODEL:       claude-haiku-4-5-20251001
+          # Notion 연동 (선택 사항 — 없으면 할 일 섹션 자동 생략)
+          NOTION_API_KEY:      ${{ secrets.NOTION_API_KEY }}
+          NOTION_TASKS_DB_ID:  ${{ secrets.NOTION_TASKS_DB_ID }}
+          OPENWEATHER_API_KEY: ${{ secrets.OPENWEATHER_API_KEY }}
+          OPENWEATHER_CITY:    ${{ secrets.OPENWEATHER_CITY }}
         run: python news_digest.py

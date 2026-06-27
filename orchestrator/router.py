@@ -11,17 +11,48 @@ ROUTER_MODEL = os.getenv("ORCHESTRATOR_MODEL", "claude-haiku-4-5-20251001")
 
 ROUTER_SYSTEM_PROMPT = """You are the orchestrator for 'J'. Decide which agent to route to.
 Agents:
-- dev: code, files, debugging, programming, 코드, 파일, 버그, 파이썬
-- planner: tasks, schedule, calendar, Google Calendar, 할 일, 일정, 스케줄, 캘린더, 구글 캘린더, 등록, 예약
-- writer: editing, essay, translation, 에세이, 문서, 첨삭, 번역
+- dev: code, files, debugging, git, programming, 코드, 파일, 버그, 파이썬, git
+- planner: tasks, schedule, calendar, Google Calendar, 할 일, 일정, 스케줄, 캘린더, 등록, 예약
+- writer: writing, editing, essay, Word document, .docx, web research + document, 문서, 에세이, 첨삭, 번역, 워드, 조사 후 문서
 - news: news, briefing, 뉴스, 브리핑
-- slide: presentation, pptx, 발표, 슬라이드
-- career: career, resume, job applications, 커리어, 이력서, 취업
-- research: web search, investigate, 조사, 리서치, 검색해줘, 찾아봐줘
-- general: everything else
-Reply ONLY in JSON: {"agent": "dev"|"planner"|"writer"|"news"|"slide"|"career"|"research"|"general", "reason": "one line"}"""
 
-GENERAL_SYSTEM_PROMPT = f"""You are 'J', a friendly AI assistant. Answer in Korean unless the user writes in English. Today: {date.today().isoformat()}"""
+- career: career, resume, job applications, 커리어, 이력서, 취업
+- research: web search, papers, arxiv, github trending, hackernews, latest AI, 조사, 리서치, 논문, 트렌딩, 검색해줘
+- vision: image/PDF analysis, 이미지 분석, pdf 분석, 사진, 스크린샷, 차트
+- notion_save: save to Notion, 노션에 저장, 저장해줘, 기록해줘, 기억해줘, 노션에, save this, 노션 저장
+- general: everything else
+
+IMPORTANT: If the user's reply is a short confirmation or follow-up, route to the SAME agent as the previous turn.
+Reply ONLY in JSON: {"agent": "dev"|"planner"|"writer"|"news"|"career"|"research"|"vision"|"notion_save"|"general", "reason": "one line"}"""
+
+def _build_general_prompt() -> str:
+    """장기 메모리 + 자기 반성 컨텍스트를 포함한 General 시스템 프롬프트를 생성한다."""
+    base = f"You are 'J', a friendly AI assistant. Answer in Korean unless the user writes in English. Today: {date.today().isoformat()}"
+    extras = []
+    try:
+        from memory.long_term_memory import get_long_term_context
+        lt = get_long_term_context()
+        if lt:
+            extras.append(lt)
+    except Exception:
+        pass
+    try:
+        from memory.self_reflection import get_reflection_context
+        ref = get_reflection_context()
+        if ref:
+            extras.append(ref)
+    except Exception:
+        pass
+    try:
+        from agents.hermes_agent import get_hermes_context
+        hc = get_hermes_context()
+        if hc:
+            extras.append(hc)
+    except Exception:
+        pass
+    return base + ("\n\n" + "\n".join(extras) if extras else "")
+
+GENERAL_SYSTEM_PROMPT = _build_general_prompt()
 
 
 class Orchestrator:
@@ -36,8 +67,8 @@ class Orchestrator:
             console.print(f"[dim]  이전 대화 {len(self.conversation_history)//2}턴 로드됨[/dim]")
 
         self._dev_agent = self._planner_agent = self._writer_agent = None
-        self._news_agent = self._slide_agent = self._career_agent = None
-        self._research_agent = None
+        self._news_agent = self._career_agent = None
+        self._research_agent = self._notion_save_agent = None
         self.last_agent = None
 
     @property
@@ -69,13 +100,6 @@ class Orchestrator:
         return self._news_agent
 
     @property
-    def slide_agent(self):
-        if not self._slide_agent:
-            from agents.slide_agent import SlideAgent
-            self._slide_agent = SlideAgent()
-        return self._slide_agent
-
-    @property
     def career_agent(self):
         if not self._career_agent:
             from agents.career_agent import CareerAgent
@@ -89,6 +113,13 @@ class Orchestrator:
             self._research_agent = run_research
         return self._research_agent
 
+    @property
+    def notion_save_agent(self):
+        if not self._notion_save_agent:
+            from agents.notion_save_agent import NotionSaveAgent
+            self._notion_save_agent = NotionSaveAgent()
+        return self._notion_save_agent
+
     def route(self, user_message: str) -> str:
         # 날씨 키워드 선처리
         weather_kw = ["날씨", "기온", "비 오나", "비와", "우산", "덥나", "춥나", "weather"]
@@ -99,6 +130,16 @@ class Orchestrator:
             self._update_history(user_message, response, "weather")
             return response
 
+        # Notion 저장 키워드 선처리 — "저장해줘", "노션에 저장" 등
+        save_kw = ["노션에 저장", "notion에 저장", "저장해줘", "저장해 줘", "기록해줘", "기억해줘",
+                   "노션에 기록", "노션 저장", "저장 해줘", "save this", "save to notion"]
+        if any(kw in user_message.lower() for kw in save_kw):
+            self.last_agent = "notion_save"
+            console.print(f"[dim]  -> notion_save (keyword fallback)[/dim]")
+            response = self._run_agent("notion_save", user_message)
+            self._update_history(user_message, response, "notion_save")
+            return response
+
         # 채용 지원 추가 키워드 선처리
         job_add_kw = ["지원 추가", "채용 추가", "잡 추가", "지원했어", "지원함", "지원했다"]
         if any(kw in user_message for kw in job_add_kw):
@@ -107,29 +148,58 @@ class Orchestrator:
             self._update_history(user_message, response, "career")
             return response
 
+        # 짧은 확인/긍정 답변 → 직전 에이전트로 계속 라우팅
+        short_confirm = ["응", "맞아", "맞아!", "yes", "네", "그래", "그렇게 해줘", "ㅇㅇ", "ok", "좋아"]
+        if self.last_agent and self.last_agent not in ("general", "weather") and \
+           any(user_message.strip().lower().startswith(w) for w in short_confirm) or \
+           (len(user_message.strip()) < 15 and any(w in user_message for w in ["맞아", "응", "네", "ㅇㅇ", "일", "시"])):
+            agent_name = self.last_agent
+            console.print(f"[dim]  -> {agent_name} (context follow-up)[/dim]")
+            response = self._run_agent(agent_name, user_message)
+            self._update_history(user_message, response, agent_name)
+            return response
+
         agent_name, reason = self._decide_agent(user_message)
         console.print(f"[dim]  -> {agent_name} ({reason})[/dim]")
         self.last_agent = agent_name
 
-        if agent_name == "dev":
-            response = self.dev_agent.run(user_message, self.conversation_history)
-        elif agent_name == "planner":
-            response = self.planner_agent.run(user_message, self.conversation_history)
-        elif agent_name == "writer":
-            response = self.writer_agent.run(user_message, self.conversation_history)
-        elif agent_name == "news":
-            response = self.news_agent.run(user_message, self.conversation_history)
-        elif agent_name == "slide":
-            response = self.slide_agent.run(user_message, self.conversation_history)
-        elif agent_name == "career":
-            response = self.career_agent.run(user_message, self.conversation_history)
-        elif agent_name == "research":
-            response = self.research_agent(user_message)
-        else:
-            response = self._handle_general(user_message)
-
+        response = self._run_agent(agent_name, user_message)
         self._update_history(user_message, response, agent_name)
+
+        # 학습 자동 감지 — 오류가 나도 대화 흐름에 영향 없음
+        try:
+            from tools.learning_tools import auto_detect_and_log
+            result = auto_detect_and_log(user_message, response)
+            if result.get("saved"):
+                console.print(
+                    f"[dim]  📚 학습 기록: {result['topic']} ({result['category']})[/dim]"
+                )
+        except Exception:
+            pass
+
         return response
+
+    def _run_agent(self, agent_name: str, user_message: str) -> str:
+        self.last_agent = agent_name
+        if agent_name == "dev":
+            return self.dev_agent.run(user_message, self.conversation_history)
+        elif agent_name == "planner":
+            return self.planner_agent.run(user_message, self.conversation_history)
+        elif agent_name == "writer":
+            return self.writer_agent.run(user_message, self.conversation_history)
+        elif agent_name == "news":
+            return self.news_agent.run(user_message, self.conversation_history)
+        elif agent_name == "career":
+            return self.career_agent.run(user_message, self.conversation_history)
+        elif agent_name == "research":
+            return self._handle_research(user_message)
+        elif agent_name == "notion_save":
+            return self.notion_save_agent.run(user_message, self.conversation_history)
+        elif agent_name == "vision":
+            from agents.vision_agent import run as vision_run
+            return vision_run(user_message, self.conversation_history)
+        else:
+            return self._handle_general(user_message)
 
     def _update_history(self, user_message: str, response: str, agent_name: str):
         self.conversation_history.append({"role": "user", "content": user_message})
@@ -137,6 +207,31 @@ class Orchestrator:
         if len(self.conversation_history) > 40:
             self.conversation_history = self.conversation_history[-40:]
         self.memory.update_agent_stat(agent_name)
+
+    def _handle_research(self, user_message: str) -> str:
+        """KB(헤르메스) 우선 검색 → 없으면 실시간 웹 조사."""
+        kb_context = ""
+        try:
+            from tools.hermes_tools import search_kb
+            hits = search_kb(user_message, top_k=3)
+            if hits:
+                lines = []
+                for h in hits:
+                    label = h.get("title") or h.get("repo", "")
+                    body  = h.get("summary") or h.get("desc", "")
+                    src   = h.get("source", "").upper()
+                    lines.append(f"[{src}] {label}: {body[:200]}")
+                kb_context = "\n".join(lines)
+        except Exception:
+            pass
+
+        if kb_context:
+            augmented = (
+                f"{user_message}\n\n"
+                f"[헤르메스 지식 베이스]\n{kb_context}"
+            )
+            return self.research_agent(augmented)
+        return self.research_agent(user_message)
 
     def _handle_weather(self, user_message: str) -> str:
         try:
@@ -154,7 +249,7 @@ class Orchestrator:
 
     def _handle_job_add(self, user_message: str) -> str:
         try:
-            from tools.career_tools_v2 import add_job_application
+            from tools.career_tools import add_job_application
             parse_resp = self.api_client.messages.create(
                 model=ROUTER_MODEL, max_tokens=200,
                 system='사용자 입력에서 채용 정보를 추출해서 JSON으로만 응답하세요: {"company":"","role":"","status":"Applied","applied_date":null,"link":"","notes":""}',
@@ -171,12 +266,35 @@ class Orchestrator:
     def save_and_exit(self):
         self.memory.save_session(self.conversation_history)
 
+        # 자기 반성 루프 (3턴 이상 대화했을 때만)
+        try:
+            from memory.self_reflection import run_self_reflection
+            result = run_self_reflection(self.conversation_history)
+            if result.get("success"):
+                console.print(f"[dim]  🔄 자기 반성 저장: {result.get('next_session_note', '')}[/dim]")
+        except Exception:
+            pass
+
+        # 주기가 됐으면 장기 메모리 자동 압축
+        try:
+            from memory.long_term_memory import compress, needs_compression
+            if needs_compression():
+                console.print("[dim]  🧠 장기 메모리 압축 중...[/dim]")
+                result = compress()
+                if result.get("success") and not result.get("skipped"):
+                    console.print(f"[dim]  ✅ 장기 메모리 압축 완료 ({result.get('week', '')})[/dim]")
+        except Exception:
+            pass
+
     def _decide_agent(self, user_message: str) -> tuple:
         try:
+            # 직전 2개 메시지를 컨텍스트로 포함
+            context_msgs = self.conversation_history[-2:] if self.conversation_history else []
+            context_msgs.append({"role": "user", "content": user_message})
             resp = self.api_client.messages.create(
                 model=ROUTER_MODEL, max_tokens=100,
                 system=ROUTER_SYSTEM_PROMPT,
-                messages=[{"role": "user", "content": user_message}]
+                messages=context_msgs
             )
             d = json.loads(resp.content[0].text.strip())
             return d.get("agent", "general"), d.get("reason", "")
@@ -186,13 +304,16 @@ class Orchestrator:
     def _keyword_fallback(self, message: str) -> str:
         msg = message.lower()
         kw = {
-            "dev":      ["code","python","bug","debug","function","script","execute","implement","코드","파이썬","버그","오류","함수","실행","구현"],
+            "dev":      ["code","python","bug","debug","function","script","execute","implement","코드","파이썬","버그","오류","함수","실행","구현","git","push","commit","커밋","푸시"],
             "planner":  ["todo","task","schedule","deadline","reminder","calendar","할 일","일정","스케줄","추가","완료","삭제","목록","캘린더","구글 캘린더","예약","등록해"],
-            "writer":   ["edit","essay","translate","draft","report","rewrite","proofread","첨삭","문서","에세이","번역","보고서","글쓰기","편집"],
+            "writer":   ["edit","essay","translate","draft","report","rewrite","proofread","docx","word","워드","첨삭","문서","에세이","번역","보고서","글쓰기","편집","조사 후 정리","웹서핑 후"],
             "news":     ["news","briefing","headline","latest","뉴스","테크","경제","스포츠","정치","브리핑"],
-            "slide":    ["slide","presentation","pptx","deck","발표","슬라이드","프레젠테이션","피티"],
+
             "career":   ["career","resume","job","application","interview","goal","skill","커리어","이력서","취업","지원","면접","목표","스킬"],
-            "research": ["조사","리서치","검색해줘","알아봐줘","찾아봐줘","research","investigate","lookup","찾아줘"],
+            "research": ["조사","리서치","검색해줘","알아봐줘","찾아봐줘","research","investigate","lookup","찾아줘",
+                         "논문","arxiv","트렌딩","깃흥 트렌딩","해커뉴스","hn","최신 ai","최신 ml","지식베이스"],
+            "vision":       ["이미지 분석","사진 분석","pdf 분석","스크린샷","차트 분석",".png",".jpg",".pdf","분석해줘"],
+            "notion_save":  ["노션에 저장","저장해줘","기록해줘","기억해줘","노션 저장","save this","노션에 기록"],
         }
         scores = {k: sum(1 for w in v if w in msg) for k, v in kw.items()}
         best = max(scores, key=scores.get)

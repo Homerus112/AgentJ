@@ -10,7 +10,11 @@ from tools.planner_tools import PLANNER_TOOLS, execute_tool as planner_execute
 from tools.notion_tools  import NOTION_TOOLS,  execute_tool as notion_execute
 from tools.gcal_tools    import GCAL_TOOLS,    execute_tool as gcal_execute
 
-ALL_TOOLS = PLANNER_TOOLS + NOTION_TOOLS + GCAL_TOOLS
+# create_event는 add_event 내부에서 자동 호출되므로 GCAL_TOOLS에서 제외
+# list_upcoming_events, delete_gcal_event, search_events만 노출
+GCAL_READONLY_TOOLS = [t for t in GCAL_TOOLS if t["name"] != "create_event"]
+
+ALL_TOOLS = PLANNER_TOOLS + NOTION_TOOLS + GCAL_READONLY_TOOLS
 
 def execute_tool(tool_name: str, tool_input: dict) -> str:
     planner_names = {t["name"] for t in PLANNER_TOOLS}
@@ -30,7 +34,7 @@ PLANNER_SYSTEM_PROMPT = """당신은 'J'의 Planner Agent입니다. 체계적인
 ## 역할
 - 할 일(To-do) 추가, 조회, 완료, 삭제, 수정
 - 일정(Schedule) 추가, 조회, 삭제
-- Google Calendar 일정 조회, 추가, 삭제, 검색
+- Google Calendar 일정 조회, 삭제, 검색
 - Notion DB/페이지 생성 및 동기화
 
 ## 원칙
@@ -38,13 +42,14 @@ PLANNER_SYSTEM_PROMPT = """당신은 'J'의 Planner Agent입니다. 체계적인
 2. 여러 개의 할 일을 한 번에 요청받으면 하나씩 순서대로 추가하라.
 3. 목록 조회 시 우선순위 순(high -> medium -> low)으로 정렬해 표시하라.
 4. 마감일이 임박한 항목은 경고 표시를 붙여라.
-5. 일정 추가 요청은 항상 add_event 툴을 사용하라. (로컬 + Google Calendar 자동 동기화)
-6. "구글 캘린더에서 조회" 또는 "구글 캘린더 일정 보여줘" 는 list_upcoming_events 툴을 사용하라.
+5. 일정 추가는 반드시 add_event 툴만 사용하라. (Google Calendar 자동 동기화 내장)
+   - create_event는 절대 직접 호출하지 말 것. add_event가 내부적으로 처리함.
+6. 구글 캘린더 일정 조회는 list_upcoming_events 툴을 사용하라.
 7. "Notion" 언급 시 notion 툴을 사용하라.
-8. 툴 실행 결과의 message 필드에 "Google Calendar 동기화 완료/실패" 가 포함되어 있으면 반드시 사용자에게 표시하라.
+8. 툴 실행 결과의 message에 Google Calendar 동기화 결과가 있으면 반드시 사용자에게 표시하라.
 
 ## 출력 형식
-- 할 일 목록: 번호, 우선순위 이모지(High/Medium/Low), 제목, 마감일 순으로 표시
+- 할 일 목록: 번호, 우선순위(High/Medium/Low), 제목, 마감일 순으로 표시
 - 일정 추가: "[날짜] [시간] [제목] 추가됨 + Google Calendar 동기화: 완료/실패" 형식으로 표시
 - 일정 조회: 날짜 -> 시간 -> 제목 순으로 표시
 - 완료/추가 후에는 간단한 확인 메시지를 출력하라.

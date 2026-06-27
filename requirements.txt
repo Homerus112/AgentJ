@@ -11,3 +11,12 @@ notion-client>=2.2.0
 google-auth-oauthlib>=1.2.0
 google-auth-httplib2>=0.2.0
 google-api-python-client>=2.120.0
+
+# Phase A - 학습 추적 + 알림
+plyer>=2.1.0
+
+# Phase C - 멀티모달
+pypdf>=4.0.0
+
+# Writer 업그레이드 - docx 저장
+python-docx>=1.1.0

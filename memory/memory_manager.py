@@ -89,10 +89,17 @@ class MemoryManager:
     # ── 장기 메모 ──────────────────────────────────────────
 
     def add_note(self, note: str) -> str:
-        """장기 메모를 추가한다 (/remember 명령어용)."""
-        entry = {"note": note, "date": datetime.now().strftime("%Y-%m-%d")}
+        """장기 메모를 추가한다 (/remember 명령어용). 로컬 + Notion 동시 저장."""
+        date_str = datetime.now().strftime("%Y-%m-%d")
+        entry = {"note": note, "date": date_str}
         self._data.setdefault("long_term", {}).setdefault("notes", []).append(entry)
         self._save()
+        # Notion 자동 동기화
+        try:
+            from tools.notion_sync import sync_note
+            sync_note(note, date_str)
+        except Exception:
+            pass
         return f"기억했습니다: {note}"
 
     def get_notes(self) -> list:
@@ -156,11 +163,11 @@ class MemoryManager:
             for n in notes[-10:]:
                 lines.append(f"  • [{n['date']}] {n['note']}")
         else:
-            lines.append("저장된 메모 없음 (/remember [내용]으로 추가)")
+            lines.append("저장된 메모 없음 (/remember [내용으로 추가)")
 
         if prefs:
             lines.append("")
-            lines.append("**설정된 선호도:**")
+            lines.append("**사용자 설정:**")
             for k, v in prefs.items():
                 lines.append(f"  • {k}: {v}")
 

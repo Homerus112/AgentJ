@@ -6,6 +6,7 @@ main.py - Agent J 메인 진입점 (Phase 6 업그레이드)
 자동 회고: python main.py --reflect
 """
 import os, sys, uuid, argparse
+from datetime import datetime
 from pathlib import Path
 from dotenv import load_dotenv
 from rich.console import Console
@@ -40,11 +41,12 @@ def print_welcome(history_turns: int = 0):
         "📅 [blue]Planner[/blue]   할 일·일정 관리\n"
         "✍️  [yellow]Writer[/yellow]    에세이·문서 첨삭\n"
         "📰 [magenta]News[/magenta]      뉴스 브리핑\n"
-        "📊 [cyan]Slide[/cyan]     발표자료 생성\n"
         "🎯 [red]Career[/red]    커리어·취업 관리\n"
-        "🔬 [white]Research[/white]  웹 조사 + Notion 저장\n\n"
+        "🔬 [white]Research[/white]  웹 조사 + Notion 저장\n"
+        "🔍 [green]Hermes[/green]   논문·GitHub·HN 지식 수집\n"
+        "👁️  [yellow]Vision[/yellow]   이미지·PDF 분석\n\n"
         "[dim]/help  /memory  /stats  /tasks  /schedule  /career  /jobs[/dim]\n"
-        "[dim]/reflect  /weekly  /evolve  /dashboard  /clear  /exit[/dim]"
+        "[dim]/git [push|status|log|diff]  /reflect  /weekly  /learning  /compress  /jlog  /evolve  /dashboard  /clear  /exit[/dim]"
         + memory_note,
         title="🤖 J", border_style="cyan"
     ))
@@ -57,7 +59,7 @@ def print_help():
 **Planner** — "내일 오후 3시 팀 미팅 추가해줘"
 **Writer** — "이 이메일 다듬어줘: [내용]"
 **News** — "오늘 테크 뉴스 요약해줘"
-**Slide** — "AI 트렌드 발표자료 8장 만들어줘"
+
 **Career** — "Google SWE 지원했어, 추가해줘"
 
 ## 명령어
@@ -134,9 +136,101 @@ def handle_special_commands(cmd: str, orchestrator) -> bool:
 
     elif cmd == "/jobs":
         try:
-            from tools.career_tools_v2 import get_job_applications, format_jobs_summary
+            from tools.career_tools import get_job_applications, format_jobs_summary
             jobs = get_job_applications()
             console.print(Panel(Markdown(format_jobs_summary(jobs)), title="💼 채용 지원 현황", border_style="red"))
+        except Exception as e:
+            console.print(f"[red]오류: {e}[/red]")
+        return True
+
+    elif cmd.startswith("/git"):
+        import subprocess
+        from pathlib import Path
+        repo_dir = str(Path(__file__).parent)
+        arg = cmd[4:].strip()   # /git 이후 인자
+
+        try:
+            if arg in ("", "status"):
+                result = subprocess.run(
+                    ["git", "status", "--short"], capture_output=True, text=True, cwd=repo_dir
+                )
+                output = result.stdout or "(변경사항 없음)"
+                console.print(Panel(output, title="📁 Git Status", border_style="yellow"))
+
+            elif arg == "log":
+                result = subprocess.run(
+                    ["git", "log", "--oneline", "-10"], capture_output=True, text=True, cwd=repo_dir
+                )
+                console.print(Panel(result.stdout, title="📜 Git Log (최근 10개)", border_style="yellow"))
+
+            elif arg.startswith("push"):
+                # 커밋 메시지 추출: /git push "메시지" 또는 기본값 사용
+                import re
+                msg_match = re.search(r'"(.+)"', arg)
+                commit_msg = msg_match.group(1) if msg_match else \
+                    f"Agent J: auto commit {datetime.now().strftime('%Y-%m-%d %H:%M')}"
+
+                console.print(f"[dim]  📤 git add → commit → push 중...[/dim]")
+                subprocess.run(["git", "add", "-A"], cwd=repo_dir)
+                commit = subprocess.run(
+                    ["git", "commit", "-m", commit_msg],
+                    capture_output=True, text=True, cwd=repo_dir
+                )
+                if "nothing to commit" in commit.stdout:
+                    console.print("[yellow]변경사항이 없어요.[/yellow]")
+                else:
+                    push = subprocess.run(
+                        ["git", "push"], capture_output=True, text=True, cwd=repo_dir
+                    )
+                    if push.returncode == 0:
+                        console.print(f"[green]✅ Push 완료: {commit_msg}[/green]")
+                    else:
+                        console.print(f"[red]❌ Push 실패:\n{push.stderr}[/red]")
+
+            elif arg == "diff":
+                result = subprocess.run(
+                    ["git", "diff", "--stat"], capture_output=True, text=True, cwd=repo_dir
+                )
+                console.print(Panel(result.stdout or "(변경사항 없음)", title="📊 Git Diff", border_style="yellow"))
+
+            else:
+                console.print(
+                    "[yellow]사용법:\n"
+                    "  /git status   — 변경사항 확인\n"
+                    '  /git push     — 자동 커밋 + push\n'
+                    '  /git push "메시지" — 커밋 메시지 지정\n'
+                    "  /git log      — 최근 커밋 10개\n"
+                    "  /git diff     — 변경 파일 통계[/yellow]"
+                )
+        except Exception as e:
+            console.print(f"[red]Git 오류: {e}[/red]")
+        return True
+
+    elif cmd == "/compress":
+        try:
+            from memory.long_term_memory import compress, get_summary_display
+            console.print("[dim]  🧠 장기 메모리 압축 중...[/dim]")
+            result = compress(force=True)
+            if result.get("success") and not result.get("skipped"):
+                console.print(f"[green]✅ 압축 완료 ({result.get('week')}): {result.get('summary')}[/green]")
+            console.print(Panel(Markdown(get_summary_display()), title="🧠 장기 메모리", border_style="cyan"))
+        except Exception as e:
+            console.print(f"[red]오류: {e}[/red]")
+        return True
+
+    elif cmd == "/jlog":
+        try:
+            from memory.self_reflection import get_reflection_display
+            console.print(Panel(Markdown(get_reflection_display()), title="🔄 J의 자기 반성", border_style="magenta"))
+        except Exception as e:
+            console.print(f"[red]오류: {e}[/red]")
+        return True
+
+    elif cmd.startswith("/learning") or cmd == "/learn":
+        try:
+            from tools.learning_tools import get_stats_summary, get_recent_logs, get_streak
+            summary = get_stats_summary()
+            console.print(Panel(Markdown(summary), title="📚 학습 진도", border_style="green"))
         except Exception as e:
             console.print(f"[red]오류: {e}[/red]")
         return True
@@ -186,16 +280,32 @@ def handle_special_commands(cmd: str, orchestrator) -> bool:
         return True
 
     elif cmd == "/dashboard":
-        import webbrowser, subprocess, threading
-        def _start():
+        import subprocess, socket, time
+        def _is_port_open(port=5000):
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                return s.connect_ex(("127.0.0.1", port)) == 0
+        def _open_browser():
+            # Windows: 'start' 명령으로 비블로킹 브라우저 오픈
+            subprocess.Popen("start http://localhost:5000", shell=True)
+        if _is_port_open():
+            console.print("[cyan]🌐 대시보드 열기: http://localhost:5000[/cyan]")
+            _open_browser()
+        else:
+            # venv python으로 서버 시작
+            venv_python = str(Path(__file__).parent / "venv" / "Scripts" / "python.exe")
+            server_script = str(Path(__file__).parent / "web" / "app.py")
             subprocess.Popen(
-                [sys.executable, str(Path(__file__).parent / "web" / "app.py")],
-                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+                [venv_python, server_script],
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                creationflags=subprocess.CREATE_NO_WINDOW if hasattr(subprocess, "CREATE_NO_WINDOW") else 0
             )
-        threading.Thread(target=_start, daemon=True).start()
-        import time; time.sleep(1)
-        webbrowser.open("http://localhost:5000")
-        console.print("[cyan]🌐 대시보드 열기: http://localhost:5000[/cyan]")
+            console.print("[yellow]⏳ 대시보드 서버 시작 중...[/yellow]")
+            for _ in range(10):  # 최대 5초 대기
+                time.sleep(0.5)
+                if _is_port_open():
+                    break
+            console.print("[cyan]🌐 대시보드 열기: http://localhost:5000[/cyan]")
+            _open_browser()
         return True
 
     return False
@@ -252,7 +362,15 @@ def main():
                 continue
 
             if user_input.startswith("/"):
-                handle_special_commands(user_input.lower() if not user_input.lower().startswith("/remember") else user_input, orchestrator)
+                # 인자 포함 명령어는 원본 대소문자를 보존해야 함
+                _cmd_lower = user_input.lower()
+                _preserve_case = (
+                    _cmd_lower.startswith("/remember") or   # 메모 내용 보존
+                    _cmd_lower.startswith("/git ") or       # 커밋 메시지 보존
+                    _cmd_lower.startswith("/reflect ") or   # 회고 내용 보존
+                    _cmd_lower.startswith("/learning")      # 학습 내용 보존
+                )
+                handle_special_commands(user_input if _preserve_case else _cmd_lower, orchestrator)
                 continue
 
             # 히스토리 저장 (user)

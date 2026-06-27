@@ -45,11 +45,23 @@ def add_task(title: str, description: str = "", due_date: str = "", priority: st
         "due_date": due_date,
         "priority": priority,
         "status": "pending",
-        "created_at": datetime.now().isoformat()
+        "created_at": datetime.now().isoformat(),
+        "notion_page_id": None,
     }
     data["tasks"].append(task)
     data["next_id"] += 1
     _save_tasks(data)
+
+    # Notion 자동 동기화
+    try:
+        from tools.notion_sync import sync_task_add
+        page_id = sync_task_add(task)
+        if page_id:
+            task["notion_page_id"] = page_id
+            _save_tasks(data)   # notion_page_id 포함해서 재저장
+    except Exception:
+        pass
+
     return {"success": True, "message": f"할 일 추가: [{task['id']}] {title}", "task": task}
 
 
@@ -70,17 +82,29 @@ def complete_task(task_id: int) -> dict:
             task["status"] = "done"
             task["completed_at"] = datetime.now().isoformat()
             _save_tasks(data)
+            # Notion 자동 동기화
+            try:
+                from tools.notion_sync import sync_task_complete
+                sync_task_complete(task)
+            except Exception:
+                pass
             return {"success": True, "message": f"완료 처리: [{task_id}] {task['title']}"}
     return {"success": False, "error": f"ID {task_id} 할 일을 찾을 수 없음"}
 
 
 def delete_task(task_id: int) -> dict:
     data = _load_tasks()
-    before = len(data["tasks"])
-    data["tasks"] = [t for t in data["tasks"] if t["id"] != task_id]
-    if len(data["tasks"]) == before:
+    target = next((t for t in data["tasks"] if t["id"] == task_id), None)
+    if not target:
         return {"success": False, "error": f"ID {task_id} 할 일을 찾을 수 없음"}
+    data["tasks"] = [t for t in data["tasks"] if t["id"] != task_id]
     _save_tasks(data)
+    # Notion 자동 동기화 (아카이브)
+    try:
+        from tools.notion_sync import sync_task_delete
+        sync_task_delete(target)
+    except Exception:
+        pass
     return {"success": True, "message": f"삭제 완료: ID {task_id}"}
 
 
@@ -95,6 +119,12 @@ def update_task(task_id: int, title: str = None, description: str = None,
             if priority is not None: task["priority"] = priority
             task["updated_at"] = datetime.now().isoformat()
             _save_tasks(data)
+            # Notion 자동 동기화
+            try:
+                from tools.notion_sync import sync_task_update
+                sync_task_update(task)
+            except Exception:
+                pass
             return {"success": True, "message": f"수정 완료: [{task_id}]", "task": task}
     return {"success": False, "error": f"ID {task_id} 할 일을 찾을 수 없음"}
 
@@ -271,5 +301,5 @@ def execute_tool(tool_name: str, tool_input: dict) -> str:
         "delete_event": delete_event
     }
     if tool_name not in tool_map:
-        return json.dumps({"success": False, "error": f"알 수 없는 툴: {tool_name}"})
+        return json.dumps({"success": False, "error": "알 수 없는 툴: " + tool_name})
     return json.dumps(tool_map[tool_name](**tool_input), ensure_ascii=False)

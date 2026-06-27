@@ -30,6 +30,10 @@ DEV_SYSTEM_PROMPT = """당신은 'J'의 Dev Agent입니다. 숙련된 풀스택 
 오늘 날짜: {today}
 """
 
+GIT_KEYWORDS = ["git push", "git commit", "git status", "git log", "git pull",
+                "커밋해줘", "푸시해줘", "push해줘", "commit해줘", "깃 상태", "깃 푸시"]
+
+
 class DevAgent(BaseAgent):
     """코드 작성 및 파일 조작 전문 에이전트."""
 
@@ -44,3 +48,22 @@ class DevAgent(BaseAgent):
             tool_executor=execute_tool,
             name="Dev Agent"
         )
+
+    def run(self, user_message: str, history: list = None) -> str:
+        """git 관련 요청은 git_tools로 직접 처리, 나머지는 기본 agentic loop."""
+        msg_lower = user_message.lower()
+        if any(kw in msg_lower for kw in GIT_KEYWORDS):
+            import re
+            from tools.git_tools import handle_git_command, git_status, git_log, git_pull
+            if "status" in msg_lower or "상태" in msg_lower:
+                return git_status()
+            elif "log" in msg_lower or "로그" in msg_lower:
+                return git_log()
+            elif "pull" in msg_lower:
+                r = git_pull()
+                return f"✅ Pull 완료\n```\n{r['output']}\n```" if r["success"] else f"❌ {r['output']}"
+            else:
+                quote = re.search(r'["\'](.+?)["\']', user_message)
+                args  = f'push "{quote.group(1)}"' if quote else "push"
+                return handle_git_command(args)
+        return super().run(user_message, history)

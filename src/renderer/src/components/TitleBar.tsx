@@ -1,10 +1,11 @@
 import { Minus, Square, X } from 'lucide-react'
+import agentJLogo from '@/assets/agent-j-logo.png'
 
 export default function TitleBar() {
   return (
     <div className="flex items-center justify-between h-9 bg-[#0a0a0a] border-b border-[#1e1e1e] select-none" style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}>
       <div className="flex items-center gap-2 px-4">
-        <span className="text-indigo-400 font-bold text-sm tracking-wide">J</span>
+        <img src={agentJLogo} alt="J" className="w-5 h-5 object-contain" />
         <span className="text-[#444] text-xs">Agent J</span>
       </div>
       <div className="flex" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>

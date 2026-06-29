@@ -1,6 +1,7 @@
 import { MessageSquare, BarChart2, Briefcase, Megaphone, Calendar, Mic, Package } from 'lucide-react'
 import { useChatStore } from '@/store/chat'
 import type { PageId } from '@/App'
+import agentJLogo from '@/assets/agent-j-logo.png'
 
 const NAV_ITEMS: { icon: typeof MessageSquare; label: string; id: PageId }[] = [
   { icon: MessageSquare, label: '채팅',     id: 'chat'      },
@@ -20,8 +21,8 @@ export default function Sidebar({ currentPage, onNavigate }: Props) {
   return (
     <div className="w-20 flex flex-col items-center bg-[#0a0a0a] border-r border-[#1e1e1e] py-3 gap-0.5 overflow-y-auto">
       {/* 로고 */}
-      <div className="w-10 h-10 rounded-xl bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center mb-2 shrink-0">
-        <span className="text-base font-bold text-indigo-400">J</span>
+      <div className="w-10 h-10 rounded-xl overflow-hidden mb-2 shrink-0">
+        <img src={agentJLogo} alt="Agent J" className="w-full h-full object-contain" />
       </div>
 
       {NAV_ITEMS.map(({ icon: Icon, label, id }) => (

@@ -4,6 +4,7 @@ import MessageBubble from './MessageBubble'
 import InputBar from './InputBar'
 import { createChatWebSocket } from '@/lib/api'
 import type { WsMessage } from '@/lib/api'
+import agentJLogo from '@/assets/agent-j-logo.png'
 
 let wsRef: ReturnType<typeof createChatWebSocket> | null = null
 
@@ -91,8 +92,8 @@ export default function ChatWindow() {
       <div className="flex-1 overflow-y-auto py-4 space-y-1">
         {messages.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full text-center gap-3">
-            <div className="w-16 h-16 rounded-2xl bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center">
-              <span className="text-3xl font-bold text-indigo-400">J</span>
+            <div className="w-16 h-16 rounded-2xl overflow-hidden">
+              <img src={agentJLogo} alt="Agent J" className="w-full h-full object-contain" />
             </div>
             <p className="text-[#555] text-sm">안녕하세요, Jeremy.<br />무엇을 도와드릴까요?</p>
           </div>

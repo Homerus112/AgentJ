@@ -1,0 +1,119 @@
+# Phase 6 설정 가이드 — 대시보드 · Reflection · Research · Job Tracker
+
+---
+
+## 1단계: 패키지 설치
+
+```bash
+pip install flask requests
+```
+
+---
+
+## 2단계: 환경변수 추가 (.env)
+
+```
+# 날씨 API (무료)
+# https://openweathermap.org/api → 회원가입 → API Keys 탭에서 복사
+OPENWEATHER_API_KEY=xxxxxxxxxxxxxxxxxxxx
+OPENWEATHER_CITY=Seoul          # 원하는 도시명 (영문)
+
+# Job Tracker Notion DB ID (6-F 단계에서 생성 후 추가)
+NOTION_JOBS_DB_ID=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+```
+
+---
+
+## 3단계: Notion DB 추가 생성
+
+### 3-1. Job Application Tracker DB
+1. Notion에서 새 페이지 → `/database` → Table
+2. 페이지 제목: `Job Applications (Agent J)`
+3. 컬럼 추가:
+
+| 컬럼명 | 타입 |
+|--------|------|
+| Company | 제목 |
+| Role | 텍스트 |
+| Status | 선택 (Applied / Interview / Offer / Rejected) |
+| Applied Date | 날짜 |
+| Link | URL |
+| Notes | 텍스트 |
+
+4. 우상단 `···` → **연결** → **Agent J** 선택
+5. URL에서 DB ID 복사 → `.env`의 `NOTION_JOBS_DB_ID`에 붙여넣기
+
+### 3-2. Daily Reflection DB
+별도 DB 없이 **메모/보고서 저장(Agent J)** 페이지 하위에 자동 생성됩니다.
+
+---
+
+## 4단계: 파일 배치
+
+아래 파일들을 Agent J 폴더에 복사하세요:
+
+```
+Agent J/
+├── memory/
+│   └── history_db.py          ← 신규
+├── web/
+│   ├── app.py                 ← 신규
+│   └── templates/
+│       └── index.html         ← 신규
+├── agents/
+│   ├── reflection_agent.py    ← 신규
+│   └── research_agent.py      ← 신규
+├── tools/
+│   ├── reflection_tools.py    ← 신규
+│   ├── research_tools.py      ← 신규
+│   └── weather_tools.py       ← 신규
+├── main.py                    ← 교체
+├── orchestrator/router.py     ← 교체
+├── news_digest.py             ← 교체
+└── requirements.txt           ← 교체
+```
+
+---
+
+## 5단계: 웹 대시보드 실행
+
+```bash
+python web/app.py
+```
+
+브라우저에서 `http://localhost:5000` 접속
+
+---
+
+## 6단계: Daily Reflection 자동화
+
+PowerShell 작업 스케줄러로 매일 밤 22시 자동 실행:
+
+```powershell
+$action = New-ScheduledTaskAction -Execute "python" -Argument "C:\path\to\AgentJ\main.py --reflect"
+$trigger = New-ScheduledTaskTrigger -Daily -At "22:00"
+Register-ScheduledTask -TaskName "AgentJ-Reflection" -Action $action -Trigger $trigger
+```
+
+---
+
+## 사용 예시
+
+| 기능 | 방법 |
+|------|------|
+| 대시보드 열기 | `python web/app.py` → localhost:5000 |
+| 대화 히스토리 검색 | 대시보드 검색창 |
+| 오늘 회고 | `/reflect` 또는 자동 (22시) |
+| 리서치 | "GPT-4o 논문 조사해줘" |
+| 채용 추가 | "Google SWE 지원 추가해줘" |
+| 채용 현황 | "/jobs" |
+
+---
+
+## 트러블슈팅
+
+| 오류 | 해결 |
+|------|------|
+| 날씨 API 오류 | OPENWEATHER_API_KEY 확인, 발급 후 10분 대기 필요 |
+| Flask 포트 충돌 | `python web/app.py --port 5001` |
+| Reflection Notion 저장 실패 | NOTION_PARENT_PAGE_ID, NOTION_API_KEY 확인 |

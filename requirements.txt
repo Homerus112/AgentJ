@@ -1,0 +1,30 @@
+anthropic>=0.40.0
+python-dotenv>=1.0.0
+rich>=13.0.0
+requests>=2.31.0
+feedparser>=6.0.0
+python-pptx>=0.6.21
+flask>=3.0.0
+
+# Phase 5 - Notion 연동
+notion-client>=2.2.0
+
+# Phase 5 - Google Calendar 연동
+google-auth-oauthlib>=1.2.0
+google-auth-httplib2>=0.2.0
+google-api-python-client>=2.120.0
+
+# Phase A - 학습 추적 + 알림
+plyer>=2.1.0
+
+# Phase C - 멀티모달
+pypdf>=4.0.0
+
+# Writer 업그레이드 - docx 저장
+python-docx>=1.0.0
+
+# GUI 서버 모드 (FastAPI + WebSocket)
+fastapi>=0.100.0
+uvicorn[standard]>=0.23.0
+websockets>=11.0
+python-multipart>=0.0.6

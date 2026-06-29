@@ -1,0 +1,38 @@
+name: Agent J — Hermes Weekly Knowledge
+
+on:
+  schedule:
+    # 매주 일요일 오후 11시 KST = 14:00 UTC
+    # → 월요일 아침 데일리 브리핑에 최신 지식이 반영됨
+    - cron: '0 14 * * 0'
+  workflow_dispatch:  # 수동 실행 버튼
+
+jobs:
+  collect-knowledge:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install anthropic python-dotenv
+
+      - name: Run Hermes agent
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          PLANNER_MODEL:     claude-haiku-4-5-20251001
+        run: python agents/hermes_agent.py
+
+      - name: Commit knowledge base update
+        run: |
+          git config user.name  "Agent J (Hermes)"
+          git config user.email "agent-j@auto"
+          git add data/knowledge_base.json data/hermes_digest.json
+          git diff --staged --quiet || git commit -m "🔍 Hermes: weekly knowledge update $(date +'%Y-%m-%d')"
+          git push

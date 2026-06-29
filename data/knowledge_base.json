@@ -1,0 +1,205 @@
+{
+  "arxiv": [
+    {
+      "title": "DanceOPD: On-Policy Generative Field Distillation",
+      "summary": "Modern image generation demands a single model that unifies diverse capabilities, including text-to-image (T2I), local editing, and global editing. However, these capabilities are rarely naturally aligned and often conflict. For instance, editing tends to degrade T2I performance, while global and lo",
+      "link": "https://arxiv.org/abs/2606.27377v1",
+      "authors": [
+        "Wei Zhou",
+        "Xiongwei Zhu",
+        "Zelin Xu"
+      ],
+      "fetched": "2026-06-27"
+    },
+    {
+      "title": "Reinforcement Learning without Ground-Truth Solutions can Improve LLMs",
+      "summary": "Reinforcement learning with verifiable rewards (RLVR) for training LLMs typically rely on ground-truth answers to assign rewards, limiting their applicability to tasks where the ground-truth solution is unknown. We introduce a \\textbf{R}anking-\\textbf{i}nduced \\textbf{VER}ifiable framework (RiVER) t",
+      "link": "https://arxiv.org/abs/2606.27369v1",
+      "authors": [
+        "Yingyu Lin",
+        "Qiyue Gao",
+        "Nikki Lijing Kuang"
+      ],
+      "fetched": "2026-06-27"
+    },
+    {
+      "title": "Autoregressive Boltzmann Generators",
+      "summary": "Efficient sampling of molecular systems at thermodynamic equilibrium is a hallmark challenge in statistical physics. This challenge has driven the development of Boltzmann Generators (BGs), which allow rapid generation of uncorrelated equilibrium samples by combining a generative model with exact li",
+      "link": "https://arxiv.org/abs/2606.27361v1",
+      "authors": [
+        "Danyal Rehman",
+        "Charlie B. Tan",
+        "Yoshua Bengio"
+      ],
+      "fetched": "2026-06-27"
+    },
+    {
+      "title": "When are likely answers right? On Sequence Probability and Correctness in LLMs",
+      "summary": "Many decoding methods for large language models can be understood as shifting probability mass toward outputs that are more likely under the model, either locally at the token level or globally at the sequence level. Therefore, their success depends on a fundamental question: when does sequence prob",
+      "link": "https://arxiv.org/abs/2606.27359v1",
+      "authors": [
+        "Johannes Zenn",
+        "Jonas Geiping"
+      ],
+      "fetched": "2026-06-27"
+    },
+    {
+      "title": "Error-Conditioned Neural Solvers",
+      "summary": "Neural surrogate models offer fast approximate mappings from PDE parameters to solutions, but they typically treat solving as a purely statistical task: once trained, they struggle to correct their own constraint violations and extrapolate beyond the training distribution. Recent hybrid methods prom",
+      "link": "https://arxiv.org/abs/2606.27354v1",
+      "authors": [
+        "Haina Jiang",
+        "Liam Wang",
+        "Peng-Chen Chen"
+      ],
+      "fetched": "2026-06-27"
+    },
+    {
+      "title": "All you need is log",
+      "summary": "Comparing two probability distributions is a basic building block of statistics and machine learning, and the right family is well understood: the Rényi divergences of order $α\\in[0,\\infty]$ are the unique family monotone under data processing and additive on independent products. Many problems inst",
+      "link": "https://arxiv.org/abs/2606.27349v1",
+      "authors": [
+        "Akshay Balsubramani"
+      ],
+      "fetched": "2026-06-27"
+    },
+    {
+      "title": "Mapping Political-Elite Networks in Europe with a Multilingual Joint Entity-Relation Extraction Pipeline",
+      "summary": "Whether political elites organise into rent-seeking coalitions that capture public resources or civic networks that sustain governance is a central question in comparative politics. Yet observing these complex, informal, and adversarial ties at scale has historically required intensive manual coding",
+      "link": "https://arxiv.org/abs/2606.27347v1",
+      "authors": [
+        "Kirill Solovev",
+        "Jana Lasser"
+      ],
+      "fetched": "2026-06-27"
+    },
+    {
+      "title": "Understanding Domain-Aware Distribution Alignment in Budgeted Entity Matching",
+      "summary": "Entity Matching (EM) is a core operation in the data integration pipeline, where records from different sources are compared to determine whether they refer to the same real-world entity. Recent work has incorporated domain information and low-resource learning techniques to better adapt EM systems ",
+      "link": "https://arxiv.org/abs/2606.27342v1",
+      "authors": [
+        "Nicholas Pulsone",
+        "Gregory Goren",
+        "Roee Shraga"
+      ],
+      "fetched": "2026-06-27"
+    }
+  ],
+  "github": [
+    {
+      "repo": "sponsors/calesthio",
+      "link": "https://github.com/sponsors/calesthio",
+      "desc": "World's first open-source, agentic video production system. 12 pipelines, 52 tools, 500+ agent skills. Turn your AI coding assistant into a full video production studio.",
+      "stars": "?",
+      "fetched": "2026-06-27"
+    },
+    {
+      "repo": "ZhuLinsen/daily_stock_analysis",
+      "link": "https://github.com/ZhuLinsen/daily_stock_analysis",
+      "desc": "LLM 驱动的多市场股票智能分析系统：多源行情、实时新闻、决策看板与自动推送，支持零成本定时运行。 LLM-powered multi-market stock analysis system with multi-source market data, real-time news, decision dashboard, automated notifications, and cost-fr",
+      "stars": "?",
+      "fetched": "2026-06-27"
+    },
+    {
+      "repo": "Panniantong/Agent-Reach",
+      "link": "https://github.com/Panniantong/Agent-Reach",
+      "desc": "Give your AI agent eyes to see the entire internet. Read &amp; search Twitter, Reddit, YouTube, GitHub, Bilibili, XiaoHongShu — one CLI, zero API fees.",
+      "stars": "?",
+      "fetched": "2026-06-27"
+    },
+    {
+      "repo": "sponsors/mukul975",
+      "link": "https://github.com/sponsors/mukul975",
+      "desc": "817 structured cybersecurity skills for AI agents · Mapped to 6 frameworks: MITRE ATT&amp;CK, NIST CSF 2.0, MITRE ATLAS, D3FEND, NIST AI RMF &amp; MITRE F3 (Fight Fraud) · agentskills.io standard · Wo",
+      "stars": "?",
+      "fetched": "2026-06-27"
+    },
+    {
+      "repo": "interviewstreet/hiring-agent",
+      "link": "https://github.com/interviewstreet/hiring-agent",
+      "desc": "AI agent to evaluate and score resumes.",
+      "stars": "?",
+      "fetched": "2026-06-27"
+    },
+    {
+      "repo": "aws/agent-toolkit-for-aws",
+      "link": "https://github.com/aws/agent-toolkit-for-aws",
+      "desc": "Official, AWS-supported MCP servers, skills, and plugins to help AI agents build on AWS",
+      "stars": "?",
+      "fetched": "2026-06-27"
+    },
+    {
+      "repo": "google-research/timesfm",
+      "link": "https://github.com/google-research/timesfm",
+      "desc": "TimesFM (Time Series Foundation Model) is a pretrained time-series foundation model developed by Google Research for time-series forecasting.",
+      "stars": "?",
+      "fetched": "2026-06-27"
+    },
+    {
+      "repo": "sponsors/topoteretes",
+      "link": "https://github.com/sponsors/topoteretes",
+      "desc": "Cognee is the open-source AI memory platform for agents. Give your AI agents persistent long-term memory across sessions with a self-hosted knowledge graph engine.",
+      "stars": "?",
+      "fetched": "2026-06-27"
+    }
+  ],
+  "hackernews": [
+    {
+      "title": "Previewing GPT‑5.6 Sol: a next-generation model",
+      "link": "https://openai.com/index/previewing-gpt-5-6-sol/",
+      "score": 917,
+      "by": "minimaxir",
+      "fetched": "2026-06-27"
+    },
+    {
+      "title": "Why does kinetic energy increase quadratically, not linearly, with speed? (2011)",
+      "link": "https://physics.stackexchange.com/questions/535/why-does-kinetic-energy-increase-quadratically-not-linearly-with-speed",
+      "score": 166,
+      "by": "ProxyTracer",
+      "fetched": "2026-06-27"
+    },
+    {
+      "title": "WordStar: A Writer's Word Processor (1996)",
+      "link": "https://www.sfwriter.com/wordstar.htm",
+      "score": 20,
+      "by": "droidjj",
+      "fetched": "2026-06-27"
+    },
+    {
+      "title": "U.S. allows Anthropic to release Mythos AI to ‘trusted’ US organizations",
+      "link": "https://www.semafor.com/article/06/27/2026/us-releases-powerful-anthropic-model-mythos-to-some-us-companies",
+      "score": 325,
+      "by": "bobrenjc93",
+      "fetched": "2026-06-27"
+    },
+    {
+      "title": "AI in mathematics is forcing big questions",
+      "link": "https://spectrum.ieee.org/ai-in-mathematics",
+      "score": 89,
+      "by": "rbanffy",
+      "fetched": "2026-06-27"
+    },
+    {
+      "title": "MicroVMs: Run isolated sandboxes with full lifecycle control",
+      "link": "https://aws.amazon.com/blogs/aws/run-isolated-sandboxes-with-full-lifecycle-control-aws-lambda-introduces-microvms/",
+      "score": 299,
+      "by": "justincormack",
+      "fetched": "2026-06-27"
+    },
+    {
+      "title": "Show HN: Hacker News on a train station-style flip board",
+      "link": "https://popflame.quickish.space/hn-flipboard/",
+      "score": 39,
+      "by": "PaybackTony",
+      "fetched": "2026-06-27"
+    },
+    {
+      "title": "Hellishly Slow Level 13 Deflate Compression",
+      "link": "https://kirill.korins.ky/articles/hellishly-slow-level-13-deflate-compression/",
+      "score": 25,
+      "by": "zX41ZdbW",
+      "fetched": "2026-06-27"
+    }
+  ],
+  "last_updated": "2026-06-27T14:29:36.515720"
+}

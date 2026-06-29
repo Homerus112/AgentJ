@@ -1,0 +1,65 @@
+[
+  {
+    "id": "qa-stats",
+    "label": "통계",
+    "icon": "📊",
+    "command": "/stats",
+    "send_immediately": true
+  },
+  {
+    "id": "qa-memory",
+    "label": "메모리",
+    "icon": "🧠",
+    "command": "/memory",
+    "send_immediately": true
+  },
+  {
+    "id": "qa-tasks",
+    "label": "할 일",
+    "icon": "✅",
+    "command": "/tasks",
+    "send_immediately": true
+  },
+  {
+    "id": "qa-schedule",
+    "label": "일정",
+    "icon": "📅",
+    "command": "/schedule",
+    "send_immediately": true
+  },
+  {
+    "id": "qa-compress",
+    "label": "메모리 압축",
+    "icon": "💾",
+    "command": "/compress",
+    "send_immediately": true
+  },
+  {
+    "id": "qa-reflect",
+    "label": "오늘 회고",
+    "icon": "📝",
+    "command": "/reflect",
+    "send_immediately": true
+  },
+  {
+    "id": "qa-weekly",
+    "label": "주간 리뷰",
+    "icon": "📆",
+    "command": "/weekly",
+    "send_immediately": true
+  },
+  {
+    "id": "qa-coach",
+    "label": "목표 코치",
+    "icon": "🏆",
+    "command": "/coach",
+    "send_immediately": true
+  },
+  {
+    "id": "qa-cb9e9266",
+    "label": "Github Push",
+    "icon": "⚡",
+    "command": "/git push",
+    "send_immediately": true
+  }
+]

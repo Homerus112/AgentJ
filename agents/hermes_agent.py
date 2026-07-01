@@ -23,8 +23,16 @@ from dotenv import load_dotenv
 from tools.hermes_tools import collect_all, search_kb, get_kb_summary, _load_kb
 
 load_dotenv()
-client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 MODEL  = os.getenv("PLANNER_MODEL", "claude-haiku-4-5-20251001")
+
+# 모듈 임포트 시점에 즉시 초기화하면 .env 로드 전일 수 있음 → lazy init
+_client = None
+
+def _get_client() -> anthropic.Anthropic:
+    global _client
+    if _client is None:
+        _client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+    return _client
 
 SUMMARY_PATH = Path(__file__).parent.parent / "data" / "hermes_digest.json"
 
@@ -81,7 +89,7 @@ def run_collect_and_summarize() -> dict:
 }}"""
 
     print("🤖 Haiku 요약 생성 중...")
-    resp = client.messages.create(
+    resp = _get_client().messages.create(
         model=MODEL, max_tokens=500,
         messages=[{"role": "user", "content": prompt}]
     )
@@ -163,7 +171,7 @@ def run(user_message: str, history: list = None) -> str:
         })
     messages.append({"role": "user", "content": user_message})
 
-    resp = client.messages.create(
+    resp = _get_client().messages.create(
         model=MODEL, max_tokens=800,
         system=system, messages=messages
     )

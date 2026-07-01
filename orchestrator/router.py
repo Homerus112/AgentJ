@@ -1,12 +1,30 @@
 """
 router.py - Orchestrator 'J' routing logic with persistent memory.
 """
-import json, os
+import json, os, sys, io
 from datetime import date
 import anthropic
 from rich.console import Console
 
-console = Console()
+# stdout이 None이거나 유효하지 않을 때 (PyInstaller --noconsole) safe fallback
+def _make_safe_console() -> Console:
+    try:
+        if sys.stdout is None:
+            raise OSError("stdout is None")
+        sys.stdout.fileno()
+        return Console()
+    except (AttributeError, OSError, io.UnsupportedOperation):
+        return Console(file=open(os.devnull, "w"), highlight=False)
+
+console = _make_safe_console()
+
+def _cprint(*args, **kwargs):
+    """console.print safe wrapper — I/O 오류를 무시한다."""
+    try:
+        console.print(*args, **kwargs)  # noqa — intentional direct call
+    except Exception:
+        pass
+
 ROUTER_MODEL = os.getenv("ORCHESTRATOR_MODEL", "claude-haiku-4-5-20251001")
 
 ROUTER_SYSTEM_PROMPT = """You are the orchestrator for 'J'. Decide which agent to route to.
@@ -20,11 +38,12 @@ Agents:
 - vision: image/PDF analysis, 이미지 분석, pdf 분석, 사진, 스크린샷, 차트
 - notion_save: save to Notion, 노션에 저장, 저장해줘, 기록해줘, 노션에, save this, 노션 저장
 - knowledge: URL processing, YouTube/GitHub/article analysis, 지식 저장, 지식 검색, URL이 포함된 메시지 (http:// or https://)
-- coach: 목표 코치, 드리프트, 주간 리뷰, 목표 점검, 행동 패턴, goal coach, weekly review, /coach
+- coach: 목표 코치, 드리프트, 주간 리뷰, 목표 점검, goal coach, weekly review, /coach
+- behavior: 행동 패턴 분석, 습관 분석, 습관 트렌드, behavior pattern, habit analysis
 - general: everything else
 
 IMPORTANT: If the user's reply is a short confirmation or follow-up, route to the SAME agent as the previous turn.
-Reply ONLY in JSON: {"agent": "dev"|"planner"|"writer"|"news"|"career"|"research"|"vision"|"notion_save"|"knowledge"|"coach"|"general", "reason": "one line"}"""
+Reply ONLY in JSON: {"agent": "dev"|"planner"|"writer"|"news"|"career"|"research"|"vision"|"notion_save"|"knowledge"|"coach"|"behavior"|"general", "reason": "one line"}"""
 
 def _build_general_prompt() -> str:
     """장기 메모리 + 자기 반성 컨텍스트를 포함한 General 시스템 프롬프트를 생성한다."""
@@ -66,12 +85,13 @@ class Orchestrator:
 
         self.conversation_history = self.memory.load_recent_history()
         if self.conversation_history:
-            console.print(f"[dim]  이전 대화 {len(self.conversation_history)//2}턴 로드됨[/dim]")
+            _cprint(f"[dim]  이전 대화 {len(self.conversation_history)//2}턴 로드됨[/dim]")
 
         self._dev_agent = self._planner_agent = self._writer_agent = None
         self._news_agent = self._career_agent = None
         self._research_agent = self._notion_save_agent = None
         self._knowledge_agent = self._coach_agent = None
+        self._behavior_agent = None
         self.last_agent = None
 
     @property
@@ -137,12 +157,19 @@ class Orchestrator:
             self._coach_agent = CoachAgent()
         return self._coach_agent
 
+    @property
+    def behavior_agent(self):
+        if not self._behavior_agent:
+            from agents.behavior_agent import BehaviorAgent
+            self._behavior_agent = BehaviorAgent()
+        return self._behavior_agent
+
     def route(self, user_message: str) -> str:
         # URL 선처리 — http/https URL이 포함된 메시지는 knowledge agent로
         if ("http://" in user_message or "https://" in user_message) and \
            not any(kw in user_message.lower() for kw in ["노션에 저장", "저장해줘", "기록해줘"]):
             self.last_agent = "knowledge"
-            console.print(f"[dim]  -> knowledge (URL detected)[/dim]")
+            _cprint(f"[dim]  -> knowledge (URL detected)[/dim]")
             response = self._run_agent("knowledge", user_message)
             self._update_history(user_message, response, "knowledge")
             return response
@@ -151,7 +178,7 @@ class Orchestrator:
         weather_kw = ["날씨", "기온", "비 오나", "비와", "우산", "덥나", "춥나", "weather"]
         if any(kw in user_message.lower() for kw in weather_kw):
             self.last_agent = "weather"
-            console.print(f"[dim]  -> weather (keyword fallback)[/dim]")
+            _cprint(f"[dim]  -> weather (keyword fallback)[/dim]")
             response = self._handle_weather(user_message)
             self._update_history(user_message, response, "weather")
             return response
@@ -161,7 +188,7 @@ class Orchestrator:
                    "노션에 기록", "노션 저장", "저장 해줘", "save this", "save to notion"]
         if any(kw in user_message.lower() for kw in save_kw):
             self.last_agent = "notion_save"
-            console.print(f"[dim]  -> notion_save (keyword fallback)[/dim]")
+            _cprint(f"[dim]  -> notion_save (keyword fallback)[/dim]")
             response = self._run_agent("notion_save", user_message)
             self._update_history(user_message, response, "notion_save")
             return response
@@ -184,13 +211,13 @@ class Orchestrator:
             or (len(user_message.strip()) < 15 and any(w in user_message for w in short_followup))
         ):
             agent_name = self.last_agent
-            console.print(f"[dim]  -> {agent_name} (context follow-up)[/dim]")
+            _cprint(f"[dim]  -> {agent_name} (context follow-up)[/dim]")
             response = self._run_agent(agent_name, user_message)
             self._update_history(user_message, response, agent_name)
             return response
 
         agent_name, reason = self._decide_agent(user_message)
-        console.print(f"[dim]  -> {agent_name} ({reason})[/dim]")
+        _cprint(f"[dim]  -> {agent_name} ({reason})[/dim]")
         self.last_agent = agent_name
 
         response = self._run_agent(agent_name, user_message)
@@ -201,7 +228,7 @@ class Orchestrator:
             from tools.learning_tools import auto_detect_and_log
             result = auto_detect_and_log(user_message, response)
             if result.get("saved"):
-                console.print(
+                _cprint(
                     f"[dim]  📚 학습 기록: {result['topic']} ({result['category']})[/dim]"
                 )
         except Exception:
@@ -229,6 +256,8 @@ class Orchestrator:
             return self.knowledge_agent.run(user_message, self.conversation_history)
         elif agent_name == "coach":
             return self.coach_agent.run(user_message, self.conversation_history)
+        elif agent_name == "behavior":
+            return self.behavior_agent.run(user_message, self.conversation_history)
         elif agent_name == "vision":
             from agents.vision_agent import run as vision_run
             return vision_run(user_message, self.conversation_history)
@@ -305,7 +334,7 @@ class Orchestrator:
             from memory.self_reflection import run_self_reflection
             result = run_self_reflection(self.conversation_history)
             if result.get("success"):
-                console.print(f"[dim]  🔄 자기 반성 저장: {result.get('next_session_note', '')}[/dim]")
+                _cprint(f"[dim]  🔄 자기 반성 저장: {result.get('next_session_note', '')}[/dim]")
         except Exception:
             pass
 
@@ -313,10 +342,10 @@ class Orchestrator:
         try:
             from memory.long_term_memory import compress, needs_compression
             if needs_compression():
-                console.print("[dim]  🧠 장기 메모리 압축 중...[/dim]")
+                _cprint("[dim]  🧠 장기 메모리 압축 중...[/dim]")
                 result = compress()
                 if result.get("success") and not result.get("skipped"):
-                    console.print(f"[dim]  ✅ 장기 메모리 압축 완료 ({result.get('week', '')})[/dim]")
+                    _cprint(f"[dim]  ✅ 장기 메모리 압축 완료 ({result.get('week', '')})[/dim]")
         except Exception:
             pass
 
@@ -354,7 +383,8 @@ class Orchestrator:
             "vision":       ["이미지 분석","사진 분석","pdf 분석","스크린샷","차트 분석",".png",".jpg",".pdf","분석해줘"],
             "notion_save":  ["노션에 저장","저장해줘","기록해줘","노션 저장","save this","노션에 기록"],
             "knowledge":    ["지식 저장","지식 검색","지식 목록","아티클 저장","유튜브 분석","youtube","github.com","youtu.be"],
-            "coach":        ["목표 코치","드리프트","주간 리뷰","목표 점검","행동 패턴","코치","weekly review"],
+            "coach":        ["목표 코치","드리프트","주간 리뷰","목표 점검","코치","weekly review"],
+            "behavior":     ["행동 패턴","습관 분석","행동 분석","습관 트렌드","behavior pattern","habit"],
         }
         scores = {k: sum(1 for w in v if w in msg) for k, v in kw.items()}
         best = max(scores, key=scores.get)
@@ -372,4 +402,4 @@ class Orchestrator:
 
     def clear_history(self):
         self.conversation_history = []
-        console.print("[yellow]대화 히스토리가 초기화되었습니다[/yellow]")
+        _cprint("[yellow]대화 히스토리가 초기화되었습니다[/yellow]")

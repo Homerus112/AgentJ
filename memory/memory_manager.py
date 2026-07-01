@@ -13,7 +13,8 @@ import json
 from pathlib import Path
 from datetime import datetime
 
-CONTEXT_FILE = Path("memory/context.json")
+# __file__ 기반 절대 경로 — CWD와 무관하게 동작 (PyInstaller frozen 환경 포함)
+CONTEXT_FILE = Path(__file__).resolve().parent / "context.json"
 MAX_SESSIONS = 5        # 보관할 최대 세션 수
 MAX_HISTORY  = 20       # 세션당 최대 대화 수 (turn 기준)
 

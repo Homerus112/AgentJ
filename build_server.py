@@ -53,8 +53,22 @@ def build():
         "--hidden-import", "notion_client",
         "--hidden-import", "google.auth",
         "--hidden-import", "googleapiclient",
+        # requirements.txt 기반 추가 hidden import
+        "--hidden-import", "rich",
+        "--hidden-import", "rich.console",
+        "--hidden-import", "rich.markdown",
+        "--hidden-import", "dotenv",
+        "--hidden-import", "multipart",
+        "--hidden-import", "feedparser",
+        "--hidden-import", "requests",
+        "--hidden-import", "pypdf",
+        "--hidden-import", "docx",
+        "--hidden-import", "pptx",
+        "--hidden-import", "plyer",
+        "--hidden-import", "sqlite3",
         "--collect-all", "anthropic",
         "--collect-all", "fastapi",
+        "--collect-all", "rich",
         str(ROOT / "server" / "api.py"),
     ]
 

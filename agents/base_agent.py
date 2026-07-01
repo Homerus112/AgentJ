@@ -6,12 +6,33 @@ base_agent.py
 
 import json
 import os
+import io
+import sys
 from typing import Callable
 import anthropic
 from rich.console import Console
 from rich.markdown import Markdown
 
-console = Console()
+# stdout이 None이거나 유효하지 않을 때 (PyInstaller --noconsole 모드) safe fallback
+def _make_safe_console() -> Console:
+    try:
+        if sys.stdout is None:
+            raise OSError("stdout is None")
+        sys.stdout.fileno()  # 유효한 fd인지 확인
+        return Console()
+    except (AttributeError, OSError, io.UnsupportedOperation):
+        # 콘솔 없는 환경 — 출력 버림
+        return Console(file=open(os.devnull, 'w'), highlight=False)
+
+console = _make_safe_console()
+
+
+def _cprint(*args, **kwargs):
+    """console.print의 safe wrapper — I/O 오류를 무시한다."""
+    try:
+        console.print(*args, **kwargs)
+    except Exception:
+        pass
 
 
 class BaseAgent:
@@ -62,7 +83,7 @@ class BaseAgent:
         messages = list(conversation_history or [])
         messages.append({"role": "user", "content": user_message})
 
-        console.print(f"\n[dim]▶ {self.name} 처리 중...[/dim]")
+        _cprint(f"\n[dim]▶ {self.name} 처리 중...[/dim]")
 
         while True:
             # API 호출
@@ -88,7 +109,7 @@ class BaseAgent:
                 tool_results = []
                 for block in response.content:
                     if block.type == "tool_use":
-                        console.print(f"[dim]  🔧 툴 실행: {block.name}({json.dumps(block.input, ensure_ascii=False)})[/dim]")
+                        _cprint(f"[dim]  🔧 툴 실행: {block.name}({json.dumps(block.input, ensure_ascii=False)})[/dim]")
                         result = self.tool_executor(block.name, block.input)
                         tool_results.append({
                             "type": "tool_result",

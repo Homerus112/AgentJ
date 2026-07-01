@@ -14,11 +14,43 @@ server/api.py — Agent J FastAPI 서버 (v3)
 import os, sys, json, uuid
 from pathlib import Path
 
-# PyInstaller 번들 환경에서 Windows cp1252 인코딩 충돌 방지
-if sys.stdout and hasattr(sys.stdout, 'reconfigure'):
-    sys.stdout.reconfigure(encoding='utf-8', errors='replace')
-if sys.stderr and hasattr(sys.stderr, 'reconfigure'):
-    sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+# ── PyInstaller --noconsole 모드 대응 ────────────────────────────────────────
+# --noconsole 빌드에서 sys.stdout/stderr = None → rich.Console이
+# os.get_terminal_size() 호출 시 [Errno 22] Invalid argument 발생.
+# 모든 모듈 import 전에 devnull 로 리다이렉트하여 방지.
+import io as _io
+def _safe_devnull():
+    try:
+        return open(os.devnull, 'w', encoding='utf-8')
+    except Exception:
+        return _io.StringIO()
+
+if sys.stdout is None:
+    sys.stdout = _safe_devnull()
+elif hasattr(sys.stdout, 'reconfigure'):
+    try:
+        sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+    except Exception:
+        sys.stdout = _safe_devnull()
+else:
+    try:
+        sys.stdout.fileno()
+    except (AttributeError, OSError, _io.UnsupportedOperation):
+        sys.stdout = _safe_devnull()
+
+if sys.stderr is None:
+    sys.stderr = _safe_devnull()
+elif hasattr(sys.stderr, 'reconfigure'):
+    try:
+        sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+    except Exception:
+        sys.stderr = _safe_devnull()
+else:
+    try:
+        sys.stderr.fileno()
+    except (AttributeError, OSError, _io.UnsupportedOperation):
+        sys.stderr = _safe_devnull()
+
 os.environ.setdefault('PYTHONIOENCODING', 'utf-8')
 from datetime import date, datetime
 from typing import List, Optional, Any

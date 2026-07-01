@@ -18,7 +18,15 @@ from tools.reflection_tools import (
 )
 
 load_dotenv()
-client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+
+# 모듈 임포트 시점에 즉시 초기화하면 .env 로드 전일 수 있음 → lazy init
+_client = None
+
+def _get_client() -> Anthropic:
+    global _client
+    if _client is None:
+        _client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+    return _client
 
 
 SYSTEM_PROMPT = """당신은 Agent J의 Daily Reflection 전문가입니다.
@@ -75,7 +83,7 @@ def run_reflection(user_input: str = None, auto_mode: bool = False) -> str:
 
     messages = [{"role": "user", "content": prompt}]
 
-    response = client.messages.create(
+    response = _get_client().messages.create(
         model="claude-haiku-4-5-20251001",
         max_tokens=1024,
         system=SYSTEM_PROMPT,
@@ -119,7 +127,7 @@ def run_weekly_reflection() -> str:
 3. 다음 주 집중할 것 2가지
 4. 한 줄 이번 주 평가"""
 
-    response = client.messages.create(
+    response = _get_client().messages.create(
         model="claude-haiku-4-5-20251001",
         max_tokens=1024,
         system=SYSTEM_PROMPT,

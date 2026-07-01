@@ -8,8 +8,10 @@ import os
 from datetime import datetime
 from pathlib import Path
 
-TASKS_FILE = Path(os.getenv("TASKS_FILE", "data/tasks.json"))
-SCHEDULE_FILE = Path(os.getenv("SCHEDULE_FILE", "data/schedule.json"))
+# __file__ 기반 절대 경로 — CWD와 무관하게 동작 (PyInstaller frozen 환경 포함)
+_BASE = Path(__file__).resolve().parent.parent
+TASKS_FILE    = Path(os.getenv("TASKS_FILE",    str(_BASE / "data" / "tasks.json")))
+SCHEDULE_FILE = Path(os.getenv("SCHEDULE_FILE", str(_BASE / "data" / "schedule.json")))
 
 
 def _load_tasks() -> dict:
